@@ -6,3 +6,6 @@ version 1.0.0:
 + tf-idf feature vectors
 + credibility adjustment tf-idf feature vectors
 + bag of centroids feature vectors
+
+Usage:<br/>
+./run.sh
