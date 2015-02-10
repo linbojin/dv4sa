@@ -25,4 +25,4 @@ def load_word_vec(fname, vocab, kind='auto'):
         raise Exception('Unknown kind')
 
 def load_docs(data_folder, cv=10, clean_string=True):
-    return doc2vec.DocVectors.build_data_cv(data_folder, cv, clean_string)
+    return doc2vec.DocVectors.load_data(data_folder, clean_string)

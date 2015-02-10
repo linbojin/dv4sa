@@ -54,7 +54,7 @@ class WordVectors(object):
         Run Kmean on wordvecs
         """
         word_vectors = self.syn0
-        num_clusters = word_vectors.shape[0] / 5
+        num_clusters = word_vectors.shape[0] / 10
 
         kmeans_clustering = KMeans( n_clusters = num_clusters )
         idx = kmeans_clustering.fit_predict( word_vectors )

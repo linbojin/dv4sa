@@ -1,6 +1,7 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
+./datasets/wordvecs/
 
 # C extensions
 *.so
