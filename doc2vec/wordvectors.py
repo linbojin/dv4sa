@@ -5,7 +5,7 @@
 import numpy as np
 import sys
 from sklearn.cluster import KMeans
-
+import time
 from doc2vec.utility import unit_vec
 
 
@@ -53,15 +53,51 @@ class WordVectors(object):
         """
         Run Kmean on wordvecs
         """
+        start = time.time() # Start time
         word_vectors = self.syn0
-        num_clusters = word_vectors.shape[0] / 10
+        num_clusters = word_vectors.shape[0] / 5
+        #print len(self.vocab)
+        #print "num_clusters", str(num_clusters)
 
         kmeans_clustering = KMeans( n_clusters = num_clusters )
         idx = kmeans_clustering.fit_predict( word_vectors )
 
         word_centroid_map = dict(zip( self.index2word, idx ))
         self.word_centroid_map = word_centroid_map
+        # Get the end time and print how long the process took
+        end = time.time()
+        elapsed = end - start
+        print "Time taken for K Means clustering: ", elapsed, "seconds."
 
+        # save vocabulary
+        print "Saving wordvec clusters"
+        with open("wordvec-clusters",'wb') as f:
+            for cluster in xrange(0,num_clusters):
+                #
+                # Print the cluster number
+                f.write("Cluster %d \n" % cluster)
+                f.write("[")
+                #
+                # Find all of the words for that cluster number, and print them out
+                words = []
+                for word, value in word_centroid_map.iteritems():
+                    if value == cluster:
+                        f.write("%s, " % word)
+                f.write("]")
+                f.write("\n\n")
+
+        # # print first 10 word clusters
+        # for cluster in xrange(0,10):
+        #     #
+        #     # Print the cluster number
+        #     print "\nCluster %d" % cluster
+        #     #
+        #     # Find all of the words for that cluster number, and print them out
+        #     words = []
+        #     for word, value in word_centroid_map.iteritems():
+        #         if value == cluster:
+        #             words.append(word)
+        #     print words
 
     @classmethod
     def load_bin_vec(cls, fname, vocab):
@@ -114,7 +150,8 @@ class WordVectors(object):
         result.dimension = k
         for word in vocab:
             if word not in result.vectors and vocab[word] >= min_df:
-                rd_vector = np.random.uniform(-0.03,0.03,k)   # 0.25
+                rd_vector = np.random.uniform(-0.25,0.25,k)   # 0.25
+                rd_vector =  unit_vec(rd_vector)
                 result.vectors[word] = rd_vector
                 result.index2word.append(word)
                 result.syn0[index] = rd_vector

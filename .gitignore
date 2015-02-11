@@ -2,6 +2,8 @@
 __pycache__/
 *.py[cod]
 ./datasets/wordvecs/
+./dv4sa.p
+./dv4sa05.p
 
 # C extensions
 *.so

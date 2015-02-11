@@ -9,7 +9,11 @@ from multiprocessing import Pool
 import os, sys
 from sklearn.svm import LinearSVC
 from sklearn.svm import SVC
-
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
+from sklearn import cross_validation
 
 def make_idx_data_cv(d2v, cv):
     train, test, train_Label, test_Label = [], [], [], []
@@ -30,7 +34,7 @@ def make_idx_data_cv(d2v, cv):
     return train, test, train_Label, test_Label
 
 
-def cross_validation(c,g):
+def cross_validation_1(c,g):
         train_results=[]
         test_results = []
         r = range(0, 10)
@@ -69,6 +73,10 @@ def training(c=1):
     perf2 = text_clf.score(d2v_model.train_doc_vecs, d2v_model.train_labels)
     perf = text_clf.score(d2v_model.test_doc_vecs, d2v_model.test_labels)
 
+    # clf = SVC(kernel='linear', C=c)
+    # scores = cross_validation.cross_val_score(clf,d2v_model.train_doc_vecs , d2v_model.train_labels, cv=5)
+    # print("Accuracy: %0.2f (+/- %0.2f)" % (scores.mean(), scores.std() * 2))
+
     train_results.append(perf2)
     test_results.append(perf)
 
@@ -80,6 +88,7 @@ print "Doc2vec version 1.0.0"
 print "Loading documents... "
 path = './datasets/'
 data_folder = [path+"rt-polarity.pos",path+"rt-polarity.neg"]
+# data_folder = [path+"test.pos",path+"test.neg"]
 d2v_model = doc2vec.load_docs(data_folder, clean_string=True)
 d2v_model.train_test_split(test_size=0.1)
 d2v_model.count_data()
@@ -88,23 +97,39 @@ print "Done!"
 #
 print "Loading wordvecs... "
 w2v_file = './datasets/wordvecs/GoogleNews-vectors-negative300.bin'
-#w2v_file = './datasets/wordvecs/vectors.bin'
+# w2v_file = './datasets/wordvecs/vectors.bin'
 w2v_model = doc2vec.load_word_vec(w2v_file, d2v_model.vocab)
 print "Done!"
+#
+print "loading word_centroid_map ...",
+x = pickle.load(open("word_centroid_map.p","rb"))
+w2v_model.word_centroid_map = x[0]
+print "Done!"
+# ##
+print "Calculating tf-idf Vectors"
+d2v_model.get_tf_idf_feature_vecs(w2v_model, cre_adjust=False)   # 0.71
+print "Done!"
+training(14)
 # #
+print "Calculating cre adjust tf-idf Vectors"
+d2v_model.get_tf_idf_feature_vecs(w2v_model, cre_adjust=True)   # 0.71
+print "Done!"
+training(16)
 # #
 print "Calculate Average Vectors"  # 0.776   0.787
 d2v_model.get_avg_feature_vecs(w2v_model)
 print "Done!"
-training(2)
+training(4)
 #
 #
-print "Calculating tf-idf Vectors"
-d2v_model.get_tf_idf_feature_vecs(w2v_model, cre_adjust=False)   # 0.71
-print "Done!"
-training(2)
-
 print "Calculating Bag of words vectors"
+d2v_model.get_bag_of_words(cre_adjust=False)   # c=0.1 0.769   False 0.761
+# cre_weight = [ 1.00000072  1.01045179  1.00366998 ...,  1.36067581  1.36067581 1.36067581]
+# min_count = 2 [ 1.00000072  1.01045179  1.00366998 ...,  1.09403062  1.09403062 1.09403062]
+print "Done!"
+training(0.1)
+#
+print "Calculating cre_adjust Bag of words vectors"
 d2v_model.get_bag_of_words(cre_adjust=True)   # c=0.1 0.769   False 0.761
 # cre_weight = [ 1.00000072  1.01045179  1.00366998 ...,  1.36067581  1.36067581 1.36067581]
 # min_count = 2 [ 1.00000072  1.01045179  1.00366998 ...,  1.09403062  1.09403062 1.09403062]
@@ -112,16 +137,30 @@ print "Done!"
 training(0.1)
 
 #
-print "Calculating bag of create_bag_of_centroids"
-w2v_model.get_w2v_centroid()
-d2v_model.create_bag_of_centroids(w2v_model.word_centroid_map)
+print "Calculating bag_of_centroids"
+#w2v_model.get_w2v_centroid()
+d2v_model.create_bag_of_centroids(w2v_model.word_centroid_map,cre_adjust=False)
 print "Done!"
-training()
+training(0.1)
+
+#
+print "Calculating cre_adjust bag_of_centroids"
+d2v_model.create_bag_of_centroids(w2v_model.word_centroid_map,cre_adjust=True)
+print "Done!"
+training(0.1)
+
+
+# with open("word_centroid_map.p", "wb") as f:
+#     pickle.dump([w2v_model.word_centroid_map], f)     # create a pickle object
+# print "dataset created!"
+
+
 #
 # print "Starting Cross Validation on Linear SVM ..."
 # c=2
 # g=2
 # cross_validation(c,g)  # (2,2) 0.799
 #
+
 
 
