@@ -40,6 +40,7 @@ class DocVectors(object):
 
         self.train_word_nums = 0.0
         self.vocab = {}
+        self.train_vocab = {}
         self.train_tf = []
         self.test_tf = []
         self.pos_counts = {}
@@ -65,12 +66,13 @@ class DocVectors(object):
         logging.debug("First test rev: [%s]" % self.test_data[0])
         logging.debug("First test label: %d" % self.test_labels[0])
 
-    def count_data(self):
+    def count_data(self, save_vocab=False, name_vocab="vocabulary"):
         """
         traverse data to build vocab, train_word_nums, tf lists, and pos_counts
         """
         train_word_nums = 0.0
         vocab = defaultdict(float)  # dict,if key不存在,返回默认值 0.0
+        train_vocab = defaultdict(float)
         pos_counts = defaultdict(float)  # for credibility Adjustment tf
         neg_counts = defaultdict(float)
         train_tf = []
@@ -83,6 +85,7 @@ class DocVectors(object):
             for word in words:
                 train_word_nums += 1
                 vocab[word] += 1     # vocab[word] = vocab[word] + 1  统计词频
+                train_vocab[word] += 1
                 tf[word] += 1
                 if label:
                     pos_counts[word] += 1
@@ -102,7 +105,7 @@ class DocVectors(object):
             for word in words:
                 tf[word] += 1
                 # train_word_nums += 1
-                # vocab[word] += 1     # vocab[word] = vocab[word] + 1  统计词频
+                vocab[word] += 1     # vocab[word] = vocab[word] + 1  统计词频
                 # if label:
                 #     pos_counts[word] += 1
                 # else:
@@ -133,18 +136,20 @@ class DocVectors(object):
 
         self.train_word_nums = train_word_nums
         self.vocab = vocab
+        self.train_vocab = train_vocab
         self.train_tf = train_tf
         self.test_tf = test_tf
         self.pos_counts = pos_counts
         self.neg_counts = neg_counts
 
-        # # save vocabulary
-        # with open("vocabulary",'wb') as f:
-        #     reverse_vocab_list = self.get_vocab_list()
-        #     for word in reverse_vocab_list:
-        #         str_vocab = word + ':' + str(self.vocab[word]) + "\n"
-        #         f.write(str_vocab)
-        #         print str_vocab,
+        # save vocabulary
+        if save_vocab:
+            with open(name_vocab,'wb') as f:
+                reverse_vocab_list = self.get_vocab_list()
+                for word in reverse_vocab_list:
+                    str_vocab = word + ':' + str(self.vocab[word]) + "\n"
+                    f.write(str_vocab)
+                    # print str_vocab,
 
         logging.debug("Total num of train words: %f, size of vocab: %f" % (train_word_nums, len(vocab)))
 
@@ -398,6 +403,82 @@ class DocVectors(object):
         test_tfidf_matrix = transformer.transform(test_tf_matrix)
         self.test_doc_vecs = test_tfidf_matrix
 
+    def cre_sim_weight(self, w2v):
+        num_centroids = max(w2v.word_centroid_map.values()) + 1
+        cluster_vocab = np.zeros(num_centroids, dtype="float32")
+        cluster_neg_counts = defaultdict(float)
+        cluster_pos_counts = defaultdict(float)
+        for word in self.train_vocab:
+            index = w2v.word_centroid_map[word]
+            cluster_vocab[index] += self.train_vocab[word]
+            if word in self.pos_counts:
+                cluster_pos_counts[index] += self.pos_counts[word]
+            if word in self.neg_counts:
+                cluster_neg_counts[index] += self.neg_counts[word]
+
+        gamma = 1
+        s_hat_average = 0.0
+        cre_sim_clu_weight= np.zeros(num_centroids, dtype="float32")
+        for cluster in xrange(num_centroids):
+            if cluster_vocab[cluster]>0:  # cluster_vocab=[1,4,5,0,6]
+                s_hat = ((cluster_neg_counts[cluster])**2 +(cluster_pos_counts[cluster])**2) / (cluster_vocab[cluster])**2
+                s_hat_average += (cluster_vocab[cluster] * s_hat) / self.train_word_nums
+
+
+        for cluster in xrange(num_centroids):
+            if cluster_vocab[cluster]>0:
+                s_bar = ((cluster_neg_counts[cluster])**2 +(cluster_pos_counts[cluster])**2 + s_hat_average * gamma) / ((cluster_vocab[cluster])**2 + gamma)
+                cre_sim_clu_weight[cluster] = 0.5 + s_bar
+
+        logging.debug("For function cre_sim_weight() **********" )
+        logging.debug("s_hat_average %f" % s_hat_average)
+
+        print "Creating cre_sim_word_weight"
+        cre_sim_word_weight = np.zeros(len(self.vocab), dtype="float32")
+        zero_clusters = np.where(cre_sim_clu_weight == 0.0)[0]
+        print "zero_clusters: ", zero_clusters
+
+        vocab_list = self.get_vocab_list()
+        for w in vocab_list:
+            index = vocab_list.index(w)
+            cluster = w2v.word_centroid_map[w]
+            # if test word in unknown cluster
+            if cluster in zero_clusters:
+                print "unknown cluster test word:", w
+                sim_words = w2v.most_similar(w)
+                print 'similar words:', sim_words
+                for sim_word in sim_words:
+                    clu = w2v.word_centroid_map[sim_word]
+                    if clu in zero_clusters:
+                        continue
+                    else:
+                        cluster = clu
+                        print "substitution word:", sim_word
+                        print "**********************************"
+                        break
+
+            cre_sim_word_weight[index] = cre_sim_clu_weight[cluster]
+
+        return cre_sim_word_weight
+
+    def cre_sim_doc_vecs(self, w2v):
+        train_tf_matrix = self.build_tf_matrix(self.train_data, self.train_tf)
+
+        cre_sim_word_weight = self.cre_sim_weight(w2v)
+        train_tf_matrix = train_tf_matrix * cre_sim_word_weight
+
+        transformer = TfidfTransformer(sublinear_tf=True)
+        train_tfidf_matrix = transformer.fit_transform(train_tf_matrix)
+
+        #print " Computing train tf_idf_doc_vecs..."
+        self.train_doc_vecs = self.compute_tf_idf_feature_vecs(w2v, train_tfidf_matrix)
+
+        #print " Computing test tf matrix..."
+        test_tf_matrix = self.build_tf_matrix(self.test_data, self.test_tf)
+        test_tf_matrix = test_tf_matrix * cre_sim_word_weight
+        #print " Computing test tf_idf_doc_vecs..."
+        test_tfidf_matrix = transformer.transform(test_tf_matrix)
+        self.test_doc_vecs = self.compute_tf_idf_feature_vecs(w2v, test_tfidf_matrix)
 
     @classmethod
     def build_data_cv_1(cls, data_folder, cv=10, clean_string=True):
@@ -528,5 +609,4 @@ class DocVectors(object):
         logging.debug("First rev: [%s]" % revs[0])
         logging.debug("First label: %d" % labels[0])
         return cls(revs=revs, labels=labels)
-
 

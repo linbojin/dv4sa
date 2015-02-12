@@ -203,5 +203,6 @@ class WordVectors(object):
             return dists
         best = argsort(dists)[::-1][:topn + len(all_words)]
         # ignore (don't return) words from the input
-        result = [(self.index2word[sim], float(dists[sim])) for sim in best if sim not in all_words]
+        # result = [(self.index2word[sim], float(dists[sim])) for sim in best if sim not in all_words]
+        result = [(self.index2word[sim]) for sim in best if sim not in all_words]
         return result[:topn]

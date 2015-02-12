@@ -2,7 +2,7 @@ from __future__ import unicode_literals
 import doc2vec
 
 
-def load_word_vec(fname, vocab, kind='auto'):
+def load_word_vec(fname, vocab, cluster=False, kind='auto'):
     '''
     Loads a word vectors file
     '''
@@ -14,7 +14,7 @@ def load_word_vec(fname, vocab, kind='auto'):
         else:
             raise Exception('Could not identify kind')
     if kind == 'bin':
-        return doc2vec.WordVectors.load_bin_vec(fname, vocab)
+        return doc2vec.WordVectors.load_bin_vec(fname, vocab, cluster)
     elif kind == 'txt':
         pass
         #return doc2vec.WordVectors.from_text(fname, *args, **kwargs)
