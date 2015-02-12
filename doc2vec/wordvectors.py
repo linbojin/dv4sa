@@ -7,11 +7,12 @@ import sys
 from sklearn.cluster import KMeans
 import time
 from doc2vec.utility import unit_vec
-
+from six import string_types
+from numpy import ndarray, argsort, array, dot, float32 as REAL
 
 class WordVectors(object):
 
-    def __init__(self, vectors=None, clusters=None):
+    def __init__(self, vectors=None, cluster=False):
         """
         Initialize a DocVectors class based on vocabulary and vectors
 
@@ -29,7 +30,7 @@ class WordVectors(object):
         #self.syn0 = syn0
         self.vectors = {}
         self.dimension = 300
-        self.clusters = clusters
+        self.cluster = cluster
         self.word_centroid_map={}
 
 
@@ -49,7 +50,7 @@ class WordVectors(object):
             print 'Word not in vocabulary'
             return
 
-    def get_w2v_centroid(self):
+    def get_w2v_centroid(self, sname = "wv-clusters"):
         """
         Run Kmean on wordvecs
         """
@@ -67,11 +68,11 @@ class WordVectors(object):
         # Get the end time and print how long the process took
         end = time.time()
         elapsed = end - start
-        print "Time taken for K Means clustering: ", elapsed, "seconds."
+        print "*** Time for KMeans:", elapsed, "seconds."
 
         # save vocabulary
-        print "Saving wordvec clusters"
-        with open("wordvec-clusters",'wb') as f:
+        # print "Saving wordvec clusters"
+        with open(sname, 'wb') as f:
             for cluster in xrange(0,num_clusters):
                 #
                 # Print the cluster number
@@ -100,7 +101,7 @@ class WordVectors(object):
         #     print words
 
     @classmethod
-    def load_bin_vec(cls, fname, vocab):
+    def load_bin_vec(cls, fname, vocab, cluster = False):
         """
         Loads 300x1 word vecs from Google (Mikolov) word2vec
         """
@@ -144,6 +145,7 @@ class WordVectors(object):
                 #         sys.stdout.write('\n')
 
         result.vocab = vocab
+        result.cluster = cluster
         # add_unknown_words
         min_df = 1
         k=layer1_size
@@ -158,3 +160,48 @@ class WordVectors(object):
                 index += 1
 
         return result
+
+
+    def most_similar(self, positive=[], negative=[], topn=10):
+        """
+        Find the top-N most similar words. Positive words contribute positively towards the
+        similarity, negative words negatively.
+        This method computes cosine similarity between a simple mean of the projection
+        weight vectors of the given words, and corresponds to the `word-analogy` and
+        `distance` scripts in the original word2vec implementation.
+        Example::
+          >>> trained_model.most_similar(positive=['woman', 'king'], negative=['man'])
+          [('queen', 0.50882536), ...]
+        """
+
+        if isinstance(positive,string_types) and not negative:
+            # allow calls like most_similar('dog'), as a shorthand for most_similar(['dog'])
+            positive = [positive]
+
+        # add weights for each word, if not already present; default to 1.0 for positive and -1.0 for negative words
+        positive = [(word, 1.0) if isinstance(word, string_types + (ndarray,))
+                                else word for word in positive]
+        negative = [(word, -1.0) if isinstance(word, string_types + (ndarray,))
+                                 else word for word in negative]
+
+        # compute the weighted average of all words
+        all_words, mean = set(), []
+        for word, weight in positive + negative:
+            if isinstance(word, ndarray):
+                mean.append(weight * word)
+            elif word in self.vocab:
+                mean.append(weight * self.syn0[self.index2word.index(word)])
+                all_words.add(self.index2word.index(word))
+            else:
+                raise KeyError("word '%s' not in vocabulary" % word)
+        if not mean:
+            raise ValueError("cannot compute similarity with no input")
+        mean = unit_vec(array(mean).mean(axis=0)).astype(REAL)
+
+        dists = dot(self.syn0, mean)
+        if not topn:
+            return dists
+        best = argsort(dists)[::-1][:topn + len(all_words)]
+        # ignore (don't return) words from the input
+        result = [(self.index2word[sim], float(dists[sim])) for sim in best if sim not in all_words]
+        return result[:topn]
