@@ -9,9 +9,14 @@ version 1.0.0:
 
 verison 1.1.0:<br/>
 for PL-sent dataset
-+ bag of words sklearn 77.1%
-+ tf-idf-uni     77.2%
-+ cre-tfidf-uni  77.5%
++ bag of words sklearn        77.1%
++ tf-idf-uni                  77.2%
++ cre-tfidf-uni               77.5%
++ word vecs ave scheme        77.3%
++ word vecs tf-idf scheme     77.2%
++ word vecs cre tf-idf scheme 76.9% (c=0.1)
++ word vecs bag of centroids  75.3% (c=0.1)
+
 
 Usage:<br/>
 Install [Anaconda](http://continuum.io/downloads) <br/>
