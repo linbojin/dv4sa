@@ -29,7 +29,7 @@ for PL-sent dataset
     <td>word vecs tf-idf</td><td>77.2%</td>
   </tr>
   <tr>
-    <td>word vecs cre tf-idf</td><td>76.9% (c=0.1)</td>
+    <td>word vecs cre tf-idf</td><td>76.9%</td>
   </tr>
   <tr>
     <td>word vecs bag of centroids</td><td>75.3% (c=0.1)</td>
