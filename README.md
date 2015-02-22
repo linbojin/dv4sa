@@ -9,13 +9,35 @@ version 1.0.0:
 
 verison 1.1.0:<br/>
 for PL-sent dataset
-+ bag of words sklearn        77.1%
-+ tf-idf-uni                  77.2%
-+ cre-tfidf-uni               77.5%
-+ word vecs ave scheme        77.3%
-+ word vecs tf-idf scheme     77.2%
-+ word vecs cre tf-idf scheme 76.9% (c=0.1)
-+ word vecs bag of centroids  75.3% (c=0.1)
+<table>
+  <tr>
+    <th>Weight Scheme</th><th>Accuracy</th>
+  </tr>
+  <tr>
+    <td>bag of words sklearn</td><td>77.1%</td>
+  </tr>
+  <tr>
+    <td>tf-idf-uni</td><td>77.2%</td>
+  </tr>
+  <tr>
+    <td>cre-tfidf-uni</td><td>77.5%</td>
+  </tr>
+  <tr>
+    <td>word vecs average</td><td>77.3%</td>
+  </tr>
+  <tr>
+    <td>word vecs tf-idf</td><td>77.2%</td>
+  </tr>
+  <tr>
+    <td>word vecs cre tf-idf</td><td>76.9% (c=0.1)</td>
+  </tr>
+  <tr>
+    <td>word vecs bag of centroids</td><td>75.3% (c=0.1)</td>
+  </tr>
+  <tr>
+    <td>word vecs cre tfidf bag of centroids</td><td>76.2% (c=0.1)</td>
+  </tr>
+</table>
 
 
 Usage:<br/>
