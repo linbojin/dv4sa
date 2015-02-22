@@ -6,7 +6,7 @@
 import doc2vec
 import numpy as np
 from multiprocessing import Pool
-import os, sys
+import os, sys, re
 from sklearn.svm import LinearSVC
 from sklearn.svm import SVC
 try:
@@ -38,7 +38,24 @@ centroid_map = path + dataset + "-centroid-map.p"
 x = pickle.load(open(centroid_map, "rb"))
 w2v_model.word_centroid_map = x[0]
 print "Done!"
-
+##############################
+print "loading clusters ..."
+fname = path + 'rt-polarity.clusters'
+ix = 1 
+clusters_dict = dict()
+with open(fname, 'rb') as f:
+    for line in f:
+        string = line.strip()
+        if ix % 3 == 1:
+            clu_name = string
+        elif ix % 3 == 2:  
+            string = re.sub(r"[^A-Za-z0-9\']", " ", string)
+            string = re.sub(r"\s{2,}", " ", string)    
+            words = string.split()        
+            clusters_dict[clu_name] = words
+        ix += 1
+w2v_model.clusters_dict = clusters_dict
+print "Done!"
 ###############################
 print "cross validation"
 train_results=[]
@@ -56,10 +73,12 @@ for i in r:
     
     # d2v_model.get_avg_feature_vecs(w2v_model)      # 77.3 c=1  word vec average scheme
     # d2v_model.get_tf_idf_feature_vecs(w2v_model)   # 77.2 c=1  word vec tf-idf scheme
-    # d2v_model.get_tf_idf_feature_vecs(w2v_model, cre_adjust=True)  # 76.9 c=1  cre tf-idf word vec average scheme
+    # d2v_model.get_tf_idf_feature_vecs(w2v_model, cre_adjust=True)  # 76.9 c=1  word vec cre tf-idf scheme
 
-    d2v_model.create_bag_of_centroids(w2v_model.word_centroid_map) # 75.3 c=0.1 word vec bag of centroids
-    d2v_model.create_bag_of_centroids(w2v_model.word_centroid_map, cre_adjust=True) 
+    # d2v_model.create_bag_of_centroids(w2v_model) # 75.3 c=0.1 word vec bag of centroids
+    d2v_model.create_bag_of_centroids(w2v_model, cre_adjust=True) # 76.2 c=0.1 word vec cre tfidf bag of centroids
+
+    # d2v_model.cre_sim_doc_vecs(w2v_model) 
 
     text_clf = LinearSVC(C=c)
     _ = text_clf.fit(d2v_model.train_doc_vecs, d2v_model.train_labels)
