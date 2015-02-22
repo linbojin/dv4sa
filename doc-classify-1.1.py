@@ -28,24 +28,38 @@ d2v_model = doc2vec.load_docs(data_folder, clean_string=True)
 print "Done!"
 ###############################
 print "Loading wordvecs... "
-#2v_file = './datasets/wordvecs/GoogleNews-vectors-negative300.bin'
-w2v_file = './datasets/wordvecs/vectors.bin'
+w2v_file = './datasets/wordvecs/GoogleNews-vectors-negative300.bin'
+# w2v_file = './datasets/wordvecs/vectors.bin'
 w2v_model = doc2vec.load_word_vec(w2v_file, d2v_model.vocab)
 print "Done!"
+##############################
+print "loading word_centroid_map ..."
+centroid_map = path + dataset + "-centroid-map.p"
+x = pickle.load(open(centroid_map, "rb"))
+w2v_model.word_centroid_map = x[0]
+print "Done!"
+
 ###############################
 print "cross validation"
 train_results=[]
 test_results = []
-c=1
+c=0.1
 
 r = range(0, 10)
 for i in r:
     print "cv = %d" % i
     d2v_model.train_test_split(i)  #  len(train) = 9587 len(test) = 1084
     d2v_model.count_data()
-    # d2v_model.get_bag_of_words_sklearn()         # 77.1 c=1  tf-idf weight scheme in sklearn
-    # d2v_model.get_bag_of_words(cre_adjust=False) # 77.2 c=1  custom tf-idf 
-    d2v_model.get_bag_of_words(cre_adjust=True)  # 77.5 c=1 cre tf-idf weight
+    # d2v_model.get_bag_of_words_sklearn()           # 77.1 c=1  tf-idf weight scheme in sklearn
+    # d2v_model.get_bag_of_words(cre_adjust=False)   # 77.2 c=1  custom tf-idf 
+    # d2v_model.get_bag_of_words(cre_adjust=True)    # 77.5 c=1  cre tf-idf weight
+    
+    # d2v_model.get_avg_feature_vecs(w2v_model)      # 77.3 c=1  word vec average scheme
+    # d2v_model.get_tf_idf_feature_vecs(w2v_model)   # 77.2 c=1  word vec tf-idf scheme
+    # d2v_model.get_tf_idf_feature_vecs(w2v_model, cre_adjust=True)  # 76.9 c=1  cre tf-idf word vec average scheme
+
+    d2v_model.create_bag_of_centroids(w2v_model.word_centroid_map) # 75.3 c=0.1 word vec bag of centroids
+    d2v_model.create_bag_of_centroids(w2v_model.word_centroid_map, cre_adjust=True) 
 
     text_clf = LinearSVC(C=c)
     _ = text_clf.fit(d2v_model.train_doc_vecs, d2v_model.train_labels)
@@ -70,12 +84,7 @@ sys.stdout.flush()
 ###############################################
 
 
-# print "loading word_centroid_map ...",
-# path = './datasets/'
-# centroid_map = path + dataset + "-centroid-map-2.p"
-# x = pickle.load(open(centroid_map, "rb"))
-# w2v_model.word_centroid_map = x[0]
-# print "Done!"
+
 # #
 # d2v_model.cre_sim_doc_vecs(w2v_model)
 # training(2)

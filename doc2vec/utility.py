@@ -3,10 +3,15 @@
 
 
 from numpy import linalg as LA
+import numpy as np
 import re
 
 def unit_vec(vec):
-    return (1.0 / LA.norm(vec, ord=2)) * vec
+    if np.all(vec == 0):
+        print "all zero test"
+        return vec
+    else:
+        return (1.0 / LA.norm(vec, ord=2)) * vec
 
 def clean_str(str):
     string = str.strip('\'')  # delete \' at the beginning
