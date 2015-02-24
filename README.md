@@ -20,7 +20,7 @@ for PL-sent dataset
     <td>tf-idf-uni</td><td>77.2%</td>
   </tr>
   <tr>
-    <td>cre-tfidf-uni</td><td>77.5%</td>
+    <td>cre-tfidf-uni*</td><td>77.5%</td>
   </tr>
   <tr>
     <td>word vecs average</td><td>77.3%</td>
@@ -37,6 +37,21 @@ for PL-sent dataset
   <tr>
     <td>word vecs cre tfidf bag of centroids</td><td>76.2% (c=0.1)</td>
   </tr>
+  <tr>
+    <td>cre_sim_doc_vecs</td><td>77.1%</td>
+  </tr>
+  <tr>
+    <td>nbsvm-uni*</td><td>78.0%</td>
+  </tr>
+  <tr>
+    <td>nbsvm-bi*</td><td>79.1%</td>
+  </tr>
+  <tr>
+    <td>word vecs nbsvm-uni</td><td>76.2%</td>
+  </tr>
+  <tr>
+    <td>word vecs nbsvm-bi</td><td>79.3%</td>
+  </tr>
 </table>
 
 for PL-subj dataset
@@ -51,7 +66,7 @@ for PL-subj dataset
     <td>tf-idf-uni</td><td>90.8%</td>
   </tr>
   <tr>
-    <td>cre-tfidf-uni</td><td>91.2%</td>
+    <td>cre-tfidf-uni*</td><td>91.2%</td>
   </tr>
   <tr>
     <td>word vecs average</td><td>90.9%</td>
@@ -68,6 +83,21 @@ for PL-subj dataset
   <tr>
     <td>word vecs cre tfidf bag of centroids</td><td>91.0% (c=0.1)</td>
   </tr>
+  <tr>
+    <td>cre_sim_doc_vecs</td><td>90.5%</td>
+  </tr>
+<!--   <tr>
+    <td>nbsvm-uni*</td><td>78.0%</td>
+  </tr>
+  <tr>
+    <td>nbsvm-bi*</td><td>79.1%</td>
+  </tr>
+  <tr>
+    <td>word vecs nbsvm-uni</td><td>76.2% (c=0.1)</td>
+  </tr>
+  <tr>
+    <td>word vecs nbsvm-bi</td><td>76.2% (c=0.1)</td>
+  </tr> -->
 </table>
 
 Usage:<br/>
