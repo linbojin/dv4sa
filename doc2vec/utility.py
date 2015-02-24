@@ -15,7 +15,8 @@ def unit_vec(vec):
 
 def clean_str(str):
     string = str.strip('\'')  # delete \' at the beginning
-    string = re.sub(r"[^A-Za-z0-9\']", " ", string)
+    # string = re.sub(r"[^A-Za-z0-9\']", " ", string)
+    string = re.sub(r"[^A-Za-z]", " ", string)
     string = re.sub(r"\'s", " ", string)
     string = re.sub(r"\'ve", " ", string)
     # string = re.sub(r"n\'t", " ", string)
@@ -45,3 +46,12 @@ def clean_str(str):
     # string = re.sub(r"\s{2,}", " ", string)
 
     return string.strip().lower()
+
+def tokenize(sentence, grams):
+    words = sentence.split()
+    tokens = []
+    for gram in grams:
+        for i in range(len(words) - gram + 1):
+            tokens += ["_".join(words[i:i+gram])]
+    return tokens
+
