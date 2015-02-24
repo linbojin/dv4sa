@@ -47,7 +47,7 @@ for PL-sent dataset
     <td>nbsvm-bi*</td><td>79.1%</td>
   </tr>
   <tr>
-    <td>word vecs nbsvm-uni</td><td>76.2%</td>
+    <td>word vecs nbsvm-uni</td><td>78.4%</td>
   </tr>
   <tr>
     <td>word vecs nbsvm-bi</td><td>79.3%</td>
