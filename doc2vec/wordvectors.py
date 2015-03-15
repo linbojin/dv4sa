@@ -2,7 +2,7 @@
 # coding=utf-8
 
 """
-    utility.py
+    wordvectors.py
     Author: Linbo
     Date: 15.03.2015
 """
