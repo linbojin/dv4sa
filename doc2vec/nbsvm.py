@@ -28,22 +28,24 @@ def process_files(file_pos, file_neg, dic, r, outfn, grams, w2v):
                 try:
                     indexes += [dic[t]]
                 except KeyError:
-                    # pass
-                    # t = t.split()
-                    try:
-                        sim_words = w2v.most_similar(t)
-                        for sim_word in sim_words:
-                            if sim_word[0] in dic and sim_word[1] > 0.7:  #
-                                print t, sim_word
-                        
-                                # if sim_word[1] > 0.8:
-                                #     print t, sim_word
-                                indexes += [dic[sim_word[0]]]
-                                break
-                            else:
-                                continue
-                    except KeyError:
+                    if w2v==None:
                         pass
+                    else:
+                        t = t.split()
+                        try:
+                            sim_words = w2v.most_similar(t)
+                            for sim_word in sim_words:
+                                if sim_word[0] in dic and sim_word[1] > 0.7:  #
+                                    print t, sim_word
+                            
+                                    # if sim_word[1] > 0.8:
+                                    #     print t, sim_word
+                                    indexes += [dic[sim_word[0]]]
+                                    break
+                                else:
+                                    continue
+                        except KeyError:
+                            pass
 
             indexes = list(set(indexes))
             indexes.sort()
@@ -71,7 +73,7 @@ def process_files(file_pos, file_neg, dic, r, outfn, grams, w2v):
 #     return dic, r
 
 
-def compute_ratio(poscounts, negcounts, alpha=1):
+def compute_ratio(poscounts, negcounts, alpha=1, sws='NBSVM'):
     alltokens = list(set(poscounts.keys() + negcounts.keys()))
     dic = dict((t, i) for i, t in enumerate(alltokens))
     d = len(dic)
@@ -84,25 +86,31 @@ def compute_ratio(poscounts, negcounts, alpha=1):
     q /= abs(q).sum()
     Fp = p
     Fn = q
-    # r = np.log(p/q)              # 88.612 91.56  91.82%         # sent05 78.2% 79.1
-    r = np.log(p*(1-q)/(q*(1-p)))  # 88.604 91.56  91.87          # sent05 78.0% 79.0   78.24%
-    # lam = 0.1 # 0.1
-    # r = Fp**lam * np.log( (Fp/Fn)**(1-lam)) #  (0.1  89.484%  91.392%)           # sent05 76.9    78.3  
-    #                                         #  (0.05 89.184%  91.536%  91.724%)  # sent05 78.01%  78.9
-    #                                         #  0.04                                       78.05
+    if sws=='NBSVM':
+        print 'NBSVM'
+        r = np.log(p/q)                # 88.612 91.56  91.82%         # sent05 78.2% 79.1        
+    elif sws=='OR':
+        print 'OR'
+        r = np.log(p*(1-q)/(q*(1-p)))  # 88.604 91.56  91.87          # sent05 78.0% 79.0   78.24%
+    elif sws=='WFO':
+        print 'WFO'
+        lam = 0.1 # 0.1
+        r = Fp**lam * np.log( (Fp/Fn)**(1-lam)) #  (0.1  89.484%  91.392%)           # sent05 76.9    78.3  
+                                              #  (0.05 89.184%  91.536%  91.724%)  # sent05 78.01%  78.9
+                                              #  0.04                                       78.05
                                               #  (0.01 88.66%   91.516%  91.892%)  # sent05 78.0    79.0
                                               #   0.007                            # sent05 77.9%   79.2%
     return dic, r  
 
 
  
-def main(ptrain, ntrain, ptest, ntest, out, liblinear, ngram, w2v):
+def main(ptrain, ntrain, ptest, ntest, out, liblinear, ngram, sws, w2v):
     ngram = [int(i) for i in ngram]
     print "counting..."
     poscounts = build_dict(ntrain, ngram)         
     negcounts = build_dict(ptrain, ngram)         
     
-    dic, r = compute_ratio(poscounts, negcounts)
+    dic, r = compute_ratio(poscounts, negcounts, sws=sws)
     print "processing files..."
     process_files(ptrain, ntrain, dic, r, "train-nbsvm.txt", ngram, w2v)
     process_files(ptest, ntest, dic, r, "test-nbsvm.txt", ngram, w2v)
@@ -113,8 +121,10 @@ def main(ptrain, ntrain, ptest, ntest, out, liblinear, ngram, w2v):
     # os.system(predictsvm + " test-nbsvm.txt model.logreg " + out)
     os.system(trainsvm + " -s 0 train-nbsvm.txt model.logreg")
     os.system(predictsvm + " -b 1 test-nbsvm.txt model.logreg " + out)
-    # os.system("rm model.logreg train-nbsvm.txt test-nbsvm.txt")
-        
+    os.remove("model.logreg")
+    os.remove("train-nbsvm.txt")
+    os.remove("test-nbsvm.txt")
+
 if __name__ == "__main__":
     """
     Usage :

@@ -601,7 +601,57 @@ class DocVectors(object):
         self.test_doc_vecs = self.compute_tf_idf_feature_vecs(w2v, test_tfidf_matrix)
 
 
-    def sws_w2v_art_fun(self, w2v):
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+############# Supervised Weight Scheme ###########
+    def sws_w2v_art_fun(self, sws='OR', ngram='1', w2v=None):
         ptrain_lines = [rev for rev in self.train_data if self.train_labels[self.train_data.index(rev)] == 1]
         ntrain_lines = [rev for rev in self.train_data if self.train_labels[self.train_data.index(rev)] == 0]
         ptest_lines = [rev for rev in self.test_data if self.test_labels[self.test_data.index(rev)] == 1]
@@ -611,22 +661,21 @@ class DocVectors(object):
         ptest_lines = "\n".join(ptest_lines)
         ntest_lines = "\n".join(ntest_lines)
 
-        with open ('ptrain','w') as f:
+        with open ('./outputs/ptrain','w') as f:
             f.writelines(ptrain_lines)
-        with open ('ntrain','w') as f:
+        with open ('./outputs/ntrain','w') as f:
             f.writelines(ntrain_lines)
-        with open ('ptest','w') as f:
+        with open ('./outputs/ptest','w') as f:
             f.writelines(ptest_lines)
-        with open ('ntest','w') as f:
+        with open ('./outputs/ntest','w') as f:
             f.writelines(ntest_lines)
 
-        nbsvm.main('ptrain', 'ntrain', 'ptest', 'ntest', 'NBSVM-TEST', 'liblinear-1.96', '1', w2v)
+        if w2v==None:
+            output = './outputs/SWS-TEST'
+        else:
+            output = './outputs/SWS-W2V-TEST'
 
-
-
-
-
-
+        nbsvm.main('./outputs/ptrain', './outputs/ntrain', './outputs/ptest', './outputs/ntest', output, 'liblinear-1.96', ngram, sws, w2v)
 
 
 
@@ -746,7 +795,7 @@ class DocVectors(object):
         print " Total loaded revs: %d" % len(orig_revs)
         print " Total vocab size: %d" % len(vocab)
 
-        print orig_revs[:50]
+        print " First 50 revs:", orig_revs[:50]
         return cls(revs=orig_revs, labels=labels, cv_split=cv_split, vocab=vocab)  # 18350
 
     @classmethod
