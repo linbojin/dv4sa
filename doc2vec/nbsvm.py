@@ -87,13 +87,10 @@ def compute_ratio(poscounts, negcounts, alpha=1, sws='NBSVM'):
     Fp = p
     Fn = q
     if sws=='NBSVM':
-        print 'NBSVM'
         r = np.log(p/q)                # 88.612 91.56  91.82%         # sent05 78.2% 79.1        
     elif sws=='OR':
-        print 'OR'
         r = np.log(p*(1-q)/(q*(1-p)))  # 88.604 91.56  91.87          # sent05 78.0% 79.0   78.24%
     elif sws=='WFO':
-        print 'WFO'
         lam = 0.1 # 0.1
         r = Fp**lam * np.log( (Fp/Fn)**(1-lam)) #  (0.1  89.484%  91.392%)           # sent05 76.9    78.3  
                                               #  (0.05 89.184%  91.536%  91.724%)  # sent05 78.01%  78.9

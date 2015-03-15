@@ -158,11 +158,11 @@ class WordVectors(object):
         result.vocab = word_vocab
         print " Selected_vocab_size:", len(word_vocab)
         result.cluster = cluster
+        result.dimension = layer1_size
         # # add_unknown_words
         # kkkk= []
         # min_df = 1
         # k=layer1_size
-        # result.dimension = k
         # for word in vocab:
         #     if word not in result.vectors and vocab[word] >= min_df:
         #         kkkk.append(word)
