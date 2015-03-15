@@ -14,19 +14,16 @@ try:
 except ImportError:
     import pickle
 
-def build_clusters(dataset):
+def build_clusters(data_folder, path, dataset):
     print "Building clusters on", dataset
-    data_folder = [path+dataset+".pos", path+dataset+".neg"]
-    d2v_model = doc2vec.load_docs(data_folder, clean_string=True)
-    d2v_model.train_test_split(test_size=0.1)
-    name_vocab = path + dataset + "-vocab"
-    d2v_model.count_data(name_vocab=name_vocab, save_vocab=True)
+    vocab_name = path + dataset + ".vocab"
+    d2v_model = doc2vec.load_docs(data_folder, clean_string=True, vocab_name=vocab_name, save_vocab=True)
 
     w2v_file = './datasets/wordvecs/GoogleNews-vectors-negative300.bin'
-    w2v_file = './datasets/wordvecs/vectors.bin'
+    # w2v_file = './datasets/wordvecs/vectors.bin'
     w2v_model = doc2vec.load_word_vec(w2v_file, d2v_model.vocab, cluster=True)
-    clusters = path + dataset + "-clusters"
-    w2v_model.get_w2v_centroid(sname=clusters)
+    sname = path + dataset + ".clusters"
+    w2v_model.get_w2v_centroid(sname=sname)
 
     centroid_map = path + dataset + "-centroid-map.p"
     with open(centroid_map, "wb") as f:
@@ -35,8 +32,12 @@ def build_clusters(dataset):
 
 print "Creating word vector clusters for datasets"
 path = './datasets/'
-datasets = ['rt-polarity', 'custrev', 'mpqa']
-# datasets = ["test"]
-for dataset in datasets:
-    build_clusters(dataset)
+
+dataset = 'rt-polarity'
+# dataset = 'test'
+data_folder = [path+dataset+".pos", path+dataset+".neg"]
+build_clusters(data_folder, path, dataset)
+# dataset = 'subj'
+# data_folder = [path+dataset+".subjective", path+dataset+".objective"]
+# build_clusters(data_folder, path, dataset)
 print "Done!"
