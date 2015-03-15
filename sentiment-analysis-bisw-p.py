@@ -23,9 +23,10 @@ print "Sentiment Analysis based on Supervied Weight Scheme"
 ############ Load d2v_model and dataset from *.p Files##################
 print "Loading d2v_model and dataset from *.p File"
 path = './datasets/'
-dataset = 'rt-polarity'
-# dataset = 'mpqa'
+# dataset = 'rt-polarity'
+dataset = 'mpqa'
 # dataset = "test"
+# dataset = 'subj'
 pickle_d2v_model = path + dataset + "-d2vmodel.p" 
 x = pickle.load(open(pickle_d2v_model, "rb"))
 d2v_model = x[0]
@@ -44,13 +45,13 @@ for i in r:
     # d2v_model.sws_w2v_art_fun(sws='NBSVM', ngram='12')
     # d2v_model.sws_w2v_art_fun(sws='NBSVM', ngram='123')
 
-    d2v_model.sws_w2v_art_fun(sws='OR', ngram='1')
+    # d2v_model.sws_w2v_art_fun(sws='OR', ngram='1')
     # d2v_model.sws_w2v_art_fun(sws='OR', ngram='12')
     # d2v_model.sws_w2v_art_fun(sws='OR', ngram='123')
 
     # d2v_model.sws_w2v_art_fun(sws='WFO', ngram='1')
     # d2v_model.sws_w2v_art_fun(sws='WFO', ngram='12')
-    # d2v_model.sws_w2v_art_fun(sws='WFO', ngram='123')
+    d2v_model.sws_w2v_art_fun(sws='WFO', ngram='123')
 
 test_results=[]
 with open("accuracy", "rb") as f:

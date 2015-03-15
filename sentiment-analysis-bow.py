@@ -19,7 +19,7 @@ print "Sentiment Analysis based on Bag of words"
 print "Loading dataset ... "
 path = './datasets/'
 dataset = 'rt-polarity'
-dataset = 'mpqa'
+# dataset = 'mpqa'
 data_folder = [path+dataset+".pos", path+dataset+".neg"]
 # dataset = 'subj'
 # data_folder = [path+dataset+".objective", path+dataset+".subjective"]
@@ -38,9 +38,9 @@ for i in r:
     print "cv = %d" % i
     d2v_model.train_test_split(i)  
     d2v_model.count_data()
-    # d2v_model.get_bag_of_words_sklearn()           # 77.1 c=1  tf-idf weight scheme in sklearn
+    d2v_model.get_bag_of_words_sklearn()           # 77.1 c=1  tf-idf weight scheme in sklearn
     # d2v_model.get_bag_of_words(cre_adjust=False)   # 77.2 c=1  custom tf-idf 
-    d2v_model.get_bag_of_words(cre_adjust=True)    # 77.5 c=1  custom cre tf-idf weight
+    # d2v_model.get_bag_of_words(cre_adjust=True)    # 77.5 c=1  custom cre tf-idf weight
     
     text_clf = LinearSVC(C=c)
     _ = text_clf.fit(d2v_model.train_doc_vecs, d2v_model.train_labels)
