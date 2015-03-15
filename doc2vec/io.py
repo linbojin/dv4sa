@@ -7,6 +7,10 @@
     Date: 15.03.2015
 """
 
+from __future__ import unicode_literals
+import doc2vec
+
+
 def load_word_vec(fname, vocab, cluster=False, kind='auto'):
     '''
     Loads a word vectors file
