@@ -4,7 +4,7 @@
 """
     docvector.py
     Author: Linbo
-    Date: 04.03.2015
+    Date: 15.03.2015
 """
 
 import numpy as np
@@ -23,7 +23,6 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 import nbsvm 
 # from stemming.porter2 import stem
 # from nltk.stem.porter import *
-
 
 class DocVectors(object):
 
@@ -601,46 +600,100 @@ class DocVectors(object):
         test_tfidf_matrix = transformer.transform(test_tf_matrix)
         self.test_doc_vecs = self.compute_tf_idf_feature_vecs(w2v, test_tfidf_matrix)
 
+
+    def sws_w2v_art_fun(self, w2v):
+        ptrain_lines = [rev for rev in self.train_data if self.train_labels[self.train_data.index(rev)] == 1]
+        ntrain_lines = [rev for rev in self.train_data if self.train_labels[self.train_data.index(rev)] == 0]
+        ptest_lines = [rev for rev in self.test_data if self.test_labels[self.test_data.index(rev)] == 1]
+        ntest_lines = [rev for rev in self.test_data if self.test_labels[self.test_data.index(rev)] == 0]
+        ptrain_lines = "\n".join(ptrain_lines)
+        ntrain_lines = "\n".join(ntrain_lines)
+        ptest_lines = "\n".join(ptest_lines)
+        ntest_lines = "\n".join(ntest_lines)
+
+        with open ('ptrain','w') as f:
+            f.writelines(ptrain_lines)
+        with open ('ntrain','w') as f:
+            f.writelines(ntrain_lines)
+        with open ('ptest','w') as f:
+            f.writelines(ptest_lines)
+        with open ('ntest','w') as f:
+            f.writelines(ntest_lines)
+
+        nbsvm.main('ptrain', 'ntrain', 'ptest', 'ntest', 'NBSVM-TEST', 'liblinear-1.96', '1', w2v)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+############# Load dataset functions ###########
     @classmethod
-    def load_data(cls, data_folder, clean_string=True):
+    def load_data(cls, data_folder, clean_string=True, vocab_name='vocab_name', save_vocab= False):
         """
         Load data with revs and labels, then clean it
         """
-        revs = []
+        orig_revs = []
         labels = []
         cv_split = []
         pos_file = data_folder[0]
         neg_file = data_folder[1]
-        vocab = defaultdict(float)  # dict,if key不存在,返回默认值 0.0
-        
-        stemmer = PorterStemmer()
+        vocab = defaultdict(float)     # dict,if key不存在,返回默认值 0.0
+
+        # stemmer = PorterStemmer()
         
         with open(pos_file, "rb") as f:
             for line in f:
                 raw_rev = line.strip()
                 if clean_string:
-                    cleaned_rev = clean_str(raw_rev)
+                    cleaned_rev = clean_str(raw_rev)  # return string
                 else:
                     cleaned_rev = raw_rev.lower()
-                    # type(cleaned_rev) is str
                 # cleaned_rev = stemmer.stem(cleaned_rev)
 
+                
                 words = cleaned_rev.split()
-                words = [word for word in words if len(word) > 1]   # 去掉一个字的单词
+
+                # words = [word for word in words if len(word) > 1]   # 去掉一个字的单词
                 # stops = set(stopwords.words("english"))
                 # words = [w for w in words if not w in stops]
+
                 for w in words:
                     vocab[w] += 1     # vocab[word] = vocab[word] + 1  统计词频
                 orig_rev = ' '.join(words)
 
-                revs.append(orig_rev)
+                orig_revs.append(orig_rev)
                 labels.append(1)
                 cv_split.append(np.random.randint(0, 10))
-
-                # tokens = tokenize(orig_rev, [1,2])
-                # for t in tokens:
-                #     vocab[t] += 1
-
 
         with open(neg_file, "rb") as f:
             for line in f:
@@ -652,27 +705,168 @@ class DocVectors(object):
                 # cleaned_rev = stemmer.stem(cleaned_rev)
 
                 words = cleaned_rev.split()
-                words = [word for word in words if len(word) > 1]   # 去掉一个字的单词
+                # words = [word for word in words if len(word) > 1]
+
                 # stops = set(stopwords.words("english"))
                 # words = [w for w in words if not w in stops]
+
                 for w in words:
-                    vocab[w] += 1     # vocab[word] = vocab[word] + 1  统计词频
+                    vocab[w] += 1
                 
                 orig_rev = ' '.join(words)
+                # print orig_rev
                 labels.append(0)
-                revs.append(orig_rev)
+                orig_revs.append(orig_rev)
                 cv_split.append(np.random.randint(0, 10))
+                # print orig_rev
 
-                # tokens = tokenize(orig_rev, [1,2])
-                # for t in tokens:
-                #     vocab[t] += 1
+        # delete word if count=1
+        # cleaned_revs = []
+        # rare_words = []
+        # for word in vocab:
+            # if vocab[word] < 1:
+                # rare_words.append(word)
+        # for word in rare_words:
+            # vocab.pop(word)
+        # for rev in orig_revs:
+            # cleaned_rev = [w for w in rev if w not in rare_words]
+            # cleaned_revs.append( ' '.join(cleaned_rev) )
+
+        # save vocabulary
+        if save_vocab:
+            with open(vocab_name,'wb') as f:
+                for word in vocab:
+                    str_vocab = word + ':' + str(vocab[word]) + "\n"
+                    f.write(str_vocab)
 
         logging.debug("For function load_data() **********" )
-        print " Total loaded revs: %d" % len(revs)
-        print " Total vocab size: %d" % len(vocab)
-        logging.debug("First rev: [%s]" % revs[0])
+        logging.debug("First rev: [%s]" % orig_revs[0])
         logging.debug("First label: %d" % labels[0])
-        return cls(revs=revs, labels=labels, cv_split=cv_split, vocab=vocab)  # 18350
+
+        print " Total loaded revs: %d" % len(orig_revs)
+        print " Total vocab size: %d" % len(vocab)
+
+        print orig_revs[:50]
+        return cls(revs=orig_revs, labels=labels, cv_split=cv_split, vocab=vocab)  # 18350
+
+    @classmethod
+    def load_splited_data(cls, data_folder, clean_string=True, vocab_name='vocab_name', save_vocab= False):
+        """
+        Load data with revs and labels, then clean it
+        """
+        train_pos_file = data_folder[0]
+        train_neg_file = data_folder[1]
+        test_pos_file = data_folder[2]
+        test_neg_file = data_folder[3]
+
+        vocab = defaultdict(float)     # dict,if key不存在,返回默认值 0.0
+
+        result = DocVectors(revs=[], labels=[], cv_split=[], vocab=[])  # 18350
+        result.train_data = []
+        result.train_labels =[]
+        result.test_data = []
+        result.test_labels =[]
+
+
+        with open(train_pos_file, "rb") as f:
+            for line in f:
+                raw_rev = line.strip()
+                if clean_string:
+                    cleaned_rev = clean_str(raw_rev)  # return string
+                else:
+                    cleaned_rev = raw_rev.lower()
+                # cleaned_rev = stemmer.stem(cleaned_rev)
+
+                words = cleaned_rev.split()
+                # words = [word for word in words if len(word) > 1]   # 去掉一个字的单词
+                # stops = set(stopwords.words("english"))
+                # words = [w for w in words if not w in stops]
+
+                for w in words:
+                    vocab[w] += 1     # vocab[word] = vocab[word] + 1  统计词频
+                orig_rev = ' '.join(words)
+
+                result.train_data.append(orig_rev)
+                result.train_labels.append(1)
+
+        with open(train_neg_file, "rb") as f:
+            for line in f:
+                raw_rev = line.strip()
+                if clean_string:
+                    cleaned_rev = clean_str(raw_rev)
+                else:
+                    cleaned_rev = raw_rev.lower()
+                # cleaned_rev = stemmer.stem(cleaned_rev)
+
+                words = cleaned_rev.split()
+                # words = [word for word in words if len(word) > 1]
+
+                # stops = set(stopwords.words("english"))
+                # words = [w for w in words if not w in stops]
+
+                for w in words:
+                    vocab[w] += 1
+
+                orig_rev = ' '.join(words)
+                result.train_data.append(orig_rev)
+                result.train_labels.append(0)
+
+        with open(test_pos_file, "rb") as f:
+            for line in f:
+                raw_rev = line.strip()
+                if clean_string:
+                    cleaned_rev = clean_str(raw_rev)  # return string
+                else:
+                    cleaned_rev = raw_rev.lower()
+                # cleaned_rev = stemmer.stem(cleaned_rev)
+
+                words = cleaned_rev.split()
+                # words = [word for word in words if len(word) > 1]   # 去掉一个字的单词
+                # stops = set(stopwords.words("english"))
+                # words = [w for w in words if not w in stops]
+
+                for w in words:
+                    vocab[w] += 1     # vocab[word] = vocab[word] + 1  统计词频
+                orig_rev = ' '.join(words)
+                result.test_data.append(orig_rev)
+                result.test_labels.append(1)
+
+        with open(test_neg_file, "rb") as f:
+            for line in f:
+                raw_rev = line.strip()
+                if clean_string:
+                    cleaned_rev = clean_str(raw_rev)
+                else:
+                    cleaned_rev = raw_rev.lower()
+                # cleaned_rev = stemmer.stem(cleaned_rev)
+
+                words = cleaned_rev.split()
+                # words = [word for word in words if len(word) > 1]
+
+                # stops = set(stopwords.words("english"))
+                # words = [w for w in words if not w in stops]
+
+                for w in words:
+                    vocab[w] += 1
+
+                orig_rev = ' '.join(words)
+                result.test_data.append(orig_rev)
+                result.test_labels.append(0)
+
+        result.vocab = vocab
+        # save vocabulary
+        if save_vocab:
+            with open(vocab_name,'wb') as f:
+                for word in vocab:
+                    str_vocab = word + ':' + str(vocab[word]) + "\n"
+                    f.write(str_vocab)
+        
+        print " Total loaded train revs: %d" % len(result.train_data)  
+        print " Total loaded test revs: %d" % len(result.test_data)  
+        print " Total vocab size: %d" % len(vocab)
+
+        print result.train_data[:5] 
+        return result
 
     def train_test_split(self, cv):
         """
@@ -703,60 +897,75 @@ class DocVectors(object):
         logging.debug("First test rev: [%s]" % self.test_data[0])
         logging.debug("First test label: %d" % self.test_labels[0])
 
-    def nbsvm_fun(self, w2v):
-        ptrain_lines = [rev for rev in self.train_data if self.train_labels[self.train_data.index(rev)]]
-        ntrain_lines = [rev for rev in self.train_data if self.train_labels[self.train_data.index(rev)] == 0]
-        ptest_lines = [rev for rev in self.test_data if self.test_labels[self.test_data.index(rev)]]
-        ntest_lines = [rev for rev in self.test_data if self.test_labels[self.test_data.index(rev)] == 0]
-        ptrain_lines = "\n".join(ptrain_lines)
-        ntrain_lines = "\n".join(ntrain_lines)
-        ptest_lines = "\n".join(ptest_lines)
-        ntest_lines = "\n".join(ntest_lines)
+    def count_data(self, save_vocab=False, vocab_name="vocabulary"):
+        """
+        traverse data to build vocab, train_word_nums, tf lists, and pos_counts
+        """
+        train_word_nums = 0.0
+        pos_words_num = 0.0
+        neg_words_num= 0.0
+        train_vocab = defaultdict(float)
+        pos_counts = defaultdict(float)  # for credibility Adjustment tf
+        neg_counts = defaultdict(float)
+        train_tf = []
+        test_tf = []
+        index = 0
+        for rev in self.train_data:
+            words = rev.split()
+            tf = defaultdict(float)  # Term Frequencies 统计每个doc内的单词词频
+            label = self.train_labels[index]
+            for word in words:
+                train_word_nums += 1
+                train_vocab[word] += 1
+                tf[word] += 1
+                if label:
+                    pos_words_num += 1
+                    pos_counts[word] += 1
+                else:
+                    neg_words_num += 1
+                    neg_counts[word] += 1
+            train_tf.append(tf)
+            index += 1
 
-        with open ('ptrain','w') as f:
-            f.writelines(ptrain_lines)
-        with open ('ntrain','w') as f:
-            f.writelines(ntrain_lines)
-        with open ('ptest','w') as f:
-            f.writelines(ptest_lines)
-        with open ('ntest','w') as f:
-            f.writelines(ntest_lines)
+        index = 0
+        for rev in self.test_data:
+            words = rev.split()
+            tf = defaultdict(float)  # Term Frequencies 统计每个doc内的单词词频
+            label = self.test_labels[index]
+            for word in words:
+                tf[word] += 1
+                # train_word_nums += 1
+                # if label:
+                #     pos_counts[word] += 1
+                # else:
+                #     neg_counts[word] += 1
+            test_tf.append(tf)
+            index += 1
 
-        nbsvm.main('ptrain', 'ntrain', 'ptest', 'ntest', 'NBSVM-TEST', 'liblinear-1.96', '12', w2v)
+        self.train_word_nums = train_word_nums
+        self.pos_words_num = pos_words_num
+        self.neg_words_num = neg_words_num
+        self.train_vocab = train_vocab
+        self.train_tf = train_tf
+        self.test_tf = test_tf
+        self.pos_counts = pos_counts
+        self.neg_counts = neg_counts
 
-    def nbsvm_fun_d2v(self, w2v):
-        ptrain_lines = [rev for rev in self.train_data if self.train_labels[self.train_data.index(rev)]]
-        ntrain_lines = [rev for rev in self.train_data if self.train_labels[self.train_data.index(rev)] == 0]
-        ptest_lines = [rev for rev in self.test_data if self.test_labels[self.test_data.index(rev)]]
-        ntest_lines = [rev for rev in self.test_data if self.test_labels[self.test_data.index(rev)] == 0]
-        ptrain_lines = "\n".join(ptrain_lines)
-        ntrain_lines = "\n".join(ntrain_lines)
-        ptest_lines = "\n".join(ptest_lines)
-        ntest_lines = "\n".join(ntest_lines)
+    def sort_fun(self,x,y):
+        return cmp(self.vocab[y], self.vocab[x])
 
-        with open ('ptrain','w') as f:
-            f.writelines(ptrain_lines)
-        with open ('ntrain','w') as f:
-            f.writelines(ntrain_lines)
-        with open ('ptest','w') as f:
-            f.writelines(ptest_lines)
-        with open ('ntest','w') as f:
-            f.writelines(ntest_lines)
+    def get_vocab_list(self):
+        """
+            get the word list based on reverse count
+        """
+        reverse_vocab_list = self.vocab.keys()
+        reverse_vocab_list.sort(self.sort_fun)
 
-        nbsvm.main('ptrain', 'ntrain', 'ptest', 'ntest', 'NBSVM-TEST', 'liblinear-1.96', '1', w2v)
-
-
-
-
-
-
-
-
-
-
-
-
-
+        #print reverse_vocab_list
+        # for word in reverse_vocab_list:
+        #    print word, ':', self.vocab[word],' ',
+        return reverse_vocab_list
+#################################################
 
 
 
