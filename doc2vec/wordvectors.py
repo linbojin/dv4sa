@@ -1,6 +1,12 @@
 #!/usr/bin/env python
 # coding=utf-8
 
+"""
+    utility.py
+    Author: Linbo
+    Date: 15.03.2015
+"""
+
 # from __future__ import unicode_literals
 import numpy as np
 import sys
@@ -9,6 +15,7 @@ import time
 from doc2vec.utility import unit_vec
 from six import string_types
 from numpy import ndarray, argsort, array, dot, float32 as REAL
+
 
 class WordVectors(object):
 
@@ -25,7 +32,7 @@ class WordVectors(object):
         clusters : word2vec.WordClusters (optional)
             1d array with the clusters calculated by word2vec
         """
-        self.vocab = {}
+        self.vocab = []
         self.index2word  = []  # map from a word's matrix index (int) to word (string)
         #self.syn0 = syn0
         self.vectors = {}
@@ -110,9 +117,12 @@ class WordVectors(object):
             header = f.readline()
             # layer1_size = 300
             vocab_size, layer1_size = map(int, header.split())
+            print " Vocab_size:", vocab_size
+            print " Vocab_dimension:", layer1_size
 
             result = WordVectors()
             result.syn0 = np.zeros((len(vocab), layer1_size), dtype='float32')
+            word_vocab = []
 
             binary_len = np.dtype('float32').itemsize * layer1_size
             counter = 0.
@@ -126,6 +136,7 @@ class WordVectors(object):
                     if ch != '\n':
                         word.append(ch)
                 if word in vocab:
+                    word_vocab += [word]
                     vector = np.fromstring(f.read(binary_len), dtype='float32')    # 将str data转换成float32  不太理解
                     uni_vector = unit_vec(vector)
                     result.vectors[word] = uni_vector
@@ -144,21 +155,26 @@ class WordVectors(object):
                 #     if counter == vocab_size:
                 #         sys.stdout.write('\n')
 
-        result.vocab = vocab
+        result.vocab = word_vocab
+        print " Selected_vocab_size:", len(word_vocab)
         result.cluster = cluster
-        # add_unknown_words
-        min_df = 1
-        k=layer1_size
-        result.dimension = k
-        for word in vocab:
-            if word not in result.vectors and vocab[word] >= min_df:
-                rd_vector = np.random.uniform(-0.25,0.25,k)   # 0.25
-                rd_vector =  unit_vec(rd_vector)
-                result.vectors[word] = rd_vector
-                result.index2word.append(word)
-                result.syn0[index] = rd_vector
-                index += 1
-
+        # # add_unknown_words
+        # kkkk= []
+        # min_df = 1
+        # k=layer1_size
+        # result.dimension = k
+        # for word in vocab:
+        #     if word not in result.vectors and vocab[word] >= min_df:
+        #         kkkk.append(word)
+        #         rd_vector = np.random.uniform(-0.25,0.25,k)   # 0.25
+        #         rd_vector =  unit_vec(rd_vector)
+        #         result.vectors[word] = rd_vector
+        #         result.index2word.append(word)
+        #         result.syn0[index] = rd_vector
+        #         index += 1
+        #
+        # print len(kkkk)
+        # print kkkk[:100]
         return result
 
 
@@ -203,6 +219,6 @@ class WordVectors(object):
             return dists
         best = argsort(dists)[::-1][:topn + len(all_words)]
         # ignore (don't return) words from the input
-        # result = [(self.index2word[sim], float(dists[sim])) for sim in best if sim not in all_words]
-        result = [(self.index2word[sim]) for sim in best if sim not in all_words]
+        result = [(self.index2word[sim], float(dists[sim])) for sim in best if sim not in all_words]
+        # result = [(self.index2word[sim]) for sim in best if sim not in all_words]
         return result[:topn]
