@@ -1,6 +1,11 @@
-from __future__ import unicode_literals
-import doc2vec
+#!/usr/bin/env python
+# coding: utf-8
 
+"""
+    io.py
+    Author: Linbo
+    Date: 15.03.2015
+"""
 
 def load_word_vec(fname, vocab, cluster=False, kind='auto'):
     '''
@@ -24,5 +29,8 @@ def load_word_vec(fname, vocab, cluster=False, kind='auto'):
     else:
         raise Exception('Unknown kind')
 
-def load_docs(data_folder, cv=10, clean_string=True):
-    return doc2vec.DocVectors.load_data(data_folder, clean_string)
+def load_docs(data_folder, clean_string=True, vocab_name='vocab_name', save_vocab=False, splited=False):
+    if splited:
+        return doc2vec.DocVectors.load_splited_data(data_folder, clean_string, vocab_name, save_vocab)
+    else:
+        return doc2vec.DocVectors.load_data(data_folder, clean_string, vocab_name, save_vocab)
