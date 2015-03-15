@@ -25,9 +25,9 @@ print "Sentiment Analysis based on Supervied Weight Scheme"
 print "Loading dataset ... "
 path = './datasets/'
 # dataset = 'rt-polarity'
-dataset = 'mpqa'
+# dataset = 'mpqa'
 # dataset = "test"
-data_folder = [path+dataset+".pos", path+dataset+".neg"]
+# data_folder = [path+dataset+".pos", path+dataset+".neg"]
 dataset = 'subj'
 data_folder = [path+dataset+".objective", path+dataset+".subjective"]
 d2v_model = doc2vec.load_docs(data_folder, clean_string=True)
@@ -65,8 +65,8 @@ print "Average accuracy: %f \n" % np.mean(test_results)
 sys.stdout.flush()
 os.remove("accuracy")
 
-pickle_d2v_model = path + dataset + "-d2vmodel.p" 
-with open("pickle_d2v_model", "wb") as f:
+pickle_d2v_model = path + dataset + "-d2vmodel-2.p" 
+with open(pickle_d2v_model, "wb") as f:
     pickle.dump([d2v_model], f)     # create a pickle object
 print "d2v_model *.P File created!"
 
