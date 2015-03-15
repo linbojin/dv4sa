@@ -2,6 +2,7 @@
 __pycache__/
 *.py[cod]
 /datasets/
+/outputs/
 ./screenshots
 
 # C extensions
