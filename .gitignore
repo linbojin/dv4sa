@@ -1,9 +1,7 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
-./datasets
-./dv4sa.p
-./dv4sa05.p
+/datasets/
 ./screenshots
 
 # C extensions
