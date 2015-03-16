@@ -23,8 +23,8 @@ print "Sentiment Analysis based on Supervied Weight Scheme"
 ############ Load d2v_model and dataset from *.p Files##################
 print "Loading d2v_model and dataset from *.p File"
 path = './datasets/'
-# dataset = 'rt-polarity'
-dataset = 'mpqa'
+dataset = 'rt-polarity'
+# dataset = 'mpqa'
 # dataset = "test"
 # dataset = 'subj'
 pickle_d2v_model = path + dataset + "-d2vmodel.p" 
@@ -40,7 +40,7 @@ r = range(0, 10)
 for i in r:
     print "Split Num = %d" % i
     d2v_model.train_test_split(i)  
-
+    
     # d2v_model.sws_w2v_art_fun(sws='NBSVM', ngram='1')
     # d2v_model.sws_w2v_art_fun(sws='NBSVM', ngram='12')
     # d2v_model.sws_w2v_art_fun(sws='NBSVM', ngram='123')
@@ -51,7 +51,9 @@ for i in r:
 
     # d2v_model.sws_w2v_art_fun(sws='WFO', ngram='1')
     # d2v_model.sws_w2v_art_fun(sws='WFO', ngram='12')
-    d2v_model.sws_w2v_art_fun(sws='WFO', ngram='123')
+    # d2v_model.sws_w2v_art_fun(sws='WFO', ngram='123')
+
+    d2v_model.sws_w2v_vectors()   # lowest speed !!!
 
 test_results=[]
 with open("accuracy", "rb") as f:
