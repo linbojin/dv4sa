@@ -8,6 +8,7 @@ update.sh
 tests.py
 liblinear-1.96/
 accuracy
+run.sh
 
 # C extensions
 *.so

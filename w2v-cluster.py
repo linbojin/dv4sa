@@ -34,10 +34,15 @@ print "Creating word vector clusters for datasets"
 path = './datasets/'
 
 dataset = 'rt-polarity'
-# dataset = 'test'
 data_folder = [path+dataset+".pos", path+dataset+".neg"]
 build_clusters(data_folder, path, dataset)
-# dataset = 'subj'
-# data_folder = [path+dataset+".subjective", path+dataset+".objective"]
-# build_clusters(data_folder, path, dataset)
+dataset = 'subj'
+data_folder = [path+dataset+".subjective", path+dataset+".objective"]
+build_clusters(data_folder, path, dataset)
+dataset = 'mpqa'
+data_folder = [path+dataset+".pos", path+dataset+".neg"]
+build_clusters(data_folder, path, dataset)
 print "Done!"
+
+
+

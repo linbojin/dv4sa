@@ -96,6 +96,7 @@ class DocVectors(object):
             if word in w2v.vocab:
                 try:
                     sws_w2v = w2v[word] * self.weight_vector[self.reverse_vocab_dict[word]]         #self.reverse_vocab_dict[word]  vocab_list.index(word)
+                    # sws_w2v = w2v[word] * self.weight_vector[self.most_senti_words.index(word)] 
                     feature_vec = np.add(feature_vec, sws_w2v)
                     nwords += 1
                 except KeyError:
@@ -111,13 +112,16 @@ class DocVectors(object):
         feature_vec = unit_vec(feature_vec)   # Normalization
         return feature_vec
 
-    def get_sws_w2v_feature_vecs(self, w2v_model, sws='NBSVM', lamda = 0.1):
+    def get_sws_w2v_feature_vecs(self, w2v_model, sws='NBSVM', lamda =0.1):
         """
             Given a set of documents calculate the average feature vector for each one
         """
         print "computing supervised weight vectors..."
-        self.compute_w2v_weight_vector(sws='NBSVM', lamda = 0.1)
-        self.get_train_vocab_list()        
+        self.compute_w2v_weight_vector(sws=sws, lamda = lamda)
+        self.get_train_vocab_list()  
+        # self.compute_sws_weight()
+        # self.weight_vector = np.abs(self.senti_weight_vector)
+
         # num_vocab = len(self.train_vocab)
         # vocab_list = self.get_train_vocab_list()
         # counter = 0.
@@ -328,7 +332,7 @@ class DocVectors(object):
         Fp /= abs(Fp).sum()
         Fn /= abs(Fn).sum()
 
-        meaning_words = int(d/2) - 500
+        meaning_words = int(d/2) - 1000
 
         # #### nbsvm ###
         # nbsvm_ratio = np.log(Fp/Fn)
