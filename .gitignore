@@ -4,6 +4,10 @@ __pycache__/
 /datasets/
 /outputs/
 ./screenshots
+update.sh
+tests.py
+liblinear-1.96/
+accuracy
 
 # C extensions
 *.so
