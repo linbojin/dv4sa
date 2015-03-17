@@ -14,11 +14,8 @@ from doc2vec.utility import *
 # from nltk.corpus import stopwords
 import logging
 logging.basicConfig(level=logging.INFO)
-# from sklearn.cross_validation import train_test_split
 
-from sklearn.feature_extraction.text import CountVectorizer   # count the occurrences words and build a matrix (doc X vocab)
 from sklearn.feature_extraction.text import TfidfTransformer  # transfer occurrences into tf or tfidf
-from sklearn.pipeline import Pipeline
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 import nbsvm 
@@ -64,315 +61,10 @@ class DocVectors(object):
         self.weight_dict = {}
         self.sentiment_vocab={}
 
-############## New Function ################
-    def dist_weight(self):
-        # print " Creating cre_adjust_tf_idf weight"
-        vocab_list = self.get_train_vocab_list()
-        # dist_weight = np.zeros(len(self.train_vocab), dtype="float32")
-        # weight_dict = dict()
-        N_pos = float(len([label for label in self.train_labels if label == 1]) + 1 )
-        N_neg = float(len([label for label in self.train_labels if label == 0]) + 1 )
-        
-        for w in vocab_list:
-            Fp = (self.pos_counts[w] + 1) / N_pos
-            Fn = (self.neg_counts[w] + 1) / N_neg
-            cre_weight = ( Fn **2 +Fp**2) / (Fn+ Fp)**2
-            # cre_weight =((self.neg_counts[w])**2 +(self.pos_counts[w])**2) / (self.train_vocab[w])**2
-            or_weight = abs(Fp*(1-Fn) / (Fn*(1-Fp)))
-            lam = 0.1
-            wfo_weight = abs( Fp**lam * math.log( (Fp/Fn)**(1-lam)) )
-            # i = vocab_list.index(w)
-            # dist_weight[i] = cre_weight * or_weight
-            self.weight_dict[w] = cre_weight
-
-        reverse_weight_list = self.weight_dict.keys()
-        reverse_weight_list.sort(self.weight_sort_fun)
-
-        print "reverse_weight_list"
-        for word in reverse_weight_list:
-           print word, ':', self.weight_dict[word] 
-
-    def sentiment_sort_fun(self,x,y):
-        return cmp(self.sentiment_vocab[y], self.sentiment_vocab[x])
-
-    def get_sentiment_vocab_list(self):
-        """
-            get the train word list based on reverse count
-        """
-        reverse_vocab_list = self.sentiment_vocab.keys()
-        reverse_vocab_list.sort(self.sentiment_sort_fun)
-
-        #print reverse_vocab_list
-        # for word in reverse_vocab_list:
-        #    print word, ':', self.vocab[word],' ',
-        return reverse_vocab_list
-
-    def new_fun(self):
-        sentiment_vocab = {}
-        weight_dict = self.weight_dict
-        self.dist_weight()
-        for word in weight_dict:
-            if weight_dict[word] > 0.55:
-                sentiment_vocab[word]=weight_dict[word]
-        self.sentiment_vocab = sentiment_vocab
-
-    def build_new_tf_matrix(self, w2v, revs, tf_data):
-        doc_num = len(revs)
-        # num_vocab = len(self.vocab)
-        # num_vocab = len(self.train_vocab)
-        num_vocab = len(self.sentiment_vocab)
-        tf_matrix = np.zeros((doc_num, num_vocab), dtype="float32")
-
-        counter = 0
-        # vocab_list = self.get_vocab_list()
-        # vocab_list = self.get_train_vocab_list()
-        vocab_list = self.get_sentiment_vocab_list()
-        test = 0
-        for rev in revs:
-            tf = tf_data[counter]
-            tf_list = np.zeros(num_vocab, dtype="float32")
-            for w in tf:
-                if w in vocab_list:
-                    try:
-                        i = vocab_list.index(w)
-                        tf_list[i] = tf[w]
-                    except ValueError:
-                        # Ignore out-of-vocabulary items
-                        sim_words = w2v.most_similar(w)
-                        for sim_word in sim_words:
-                            if sim_word[0] in vocab_list and sim_word[1] > 0.7:  # 
-                                # if sim_word[1] < 0.5:
-                                #     print w, sim_word
-                                i = vocab_list.index(sim_word[0])
-                                tf_list[i] = tf[w]
-                                break
-                            else:
-                                continue
-                else:
-                    sim_words = w2v.most_similar(w)
-                    for sim_word in sim_words:
-                        if sim_word[0] in vocab_list and sim_word[1] > 0.6:  # 
-                            # if sim_word[1] < 0.5:
-                            #     print w, sim_word
-                            i = vocab_list.index(sim_word[0])
-                            tf_list[i] = tf[w]
-                            break
-                        else:
-                            continue
-
-            if np.array_equal(tf_list, np.zeros(num_vocab, dtype="float32")):
-                print "Zero tf array for test doc"
-                print rev
-                #tf_list = np.random.uniform(0,2, num_vocab)
-                #print tf_list
-            
-            # # normalize tf list
-            # tf_norm_list = 0.5 + 0.5 * tf_list / np.amax(tf_list)
-            # print tf_norm_list
-            # tf_matrix[counter] = tf_norm_list
-
-            tf_matrix[counter] = tf_list
-            counter = counter + 1
-
-        return tf_matrix
-
-    def get_new_bag_of_words(self, w2v, cre_adjust=False):
-        """
-            tf-idf weight scheme
-        """
-       # print " Computing train idf tf matrix..."
-        train_tf_matrix = self.build_new_tf_matrix(w2v, self.train_data, self.train_tf)
-        # print train_tf_matrix[0]
-        # print self.get_vocab_list()
-        if cre_adjust:
-            cre_adjust_weight = self.cre_adjust_tf_idf()
-            train_tf_matrix = train_tf_matrix * cre_adjust_weight
-        transformer = TfidfTransformer(sublinear_tf=cre_adjust) # sublinear_tf=True, selected for cre_adjust = true
-        train_tfidf_matrix = transformer.fit_transform(train_tf_matrix)
-        self.train_doc_vecs = train_tfidf_matrix
-
-        #print " Computing test idf tf matrix..."
-        test_tf_matrix = self.build_new_tf_matrix(w2v, self.test_data, self.test_tf)
-        if cre_adjust:
-            test_tf_matrix = test_tf_matrix * cre_adjust_weight
-        test_tfidf_matrix = transformer.transform(test_tf_matrix)
-        self.test_doc_vecs = test_tfidf_matrix
-############################################
-
-
-
-
-
-
-
-
-
-####### XXXXXXXXXXXXXXXXXXXXXXXXX ############
-    def build_sim_tf_matrix(self, revs, tf_data):
-        doc_num = len(revs)
-        num_vocab = len(self.vocab)
-        # num_vocab = len(self.train_vocab)
-        tf_matrix = np.zeros((doc_num, num_vocab), dtype="float32")
-
-        counter = 0
-        vocab_list = self.get_vocab_list()
-        # vocab_list = self.get_train_vocab_list()
-
-        for rev in revs:
-            tf = tf_data[counter]
-            tf_list = np.zeros(num_vocab, dtype="float32")
-            for w in tf:
-                try:
-                    i = vocab_list.index(w)
-                    tf_list[i] = tf[w]
-                except ValueError:
-                    # Ignore out-of-vocabulary items
-                    continue
-            if np.array_equal(tf_list, np.zeros(num_vocab, dtype="float32")):
-                print "Zero tf array for test doc"
-                print rev
-                #tf_list = np.random.uniform(0,2, num_vocab)
-                #print tf_list
-            
-            # # normalize tf list
-            # tf_norm_list = 0.5 + 0.5 * tf_list / np.amax(tf_list)
-            # print tf_norm_list
-            # tf_matrix[counter] = tf_norm_list
-
-            tf_matrix[counter] = tf_list
-            counter = counter + 1
-
-        return tf_matrix
-
-    def cre_sim_weight(self, w2v):
-        num_centroids = max(w2v.word_centroid_map.values()) + 1
-        cluster_vocab = np.zeros(num_centroids, dtype="float32")
-        cluster_neg_counts = defaultdict(float)
-        cluster_pos_counts = defaultdict(float)
-        for word in self.train_vocab:
-            index = w2v.word_centroid_map[word]
-            cluster_vocab[index] += self.train_vocab[word]
-            if word in self.pos_counts:
-                cluster_pos_counts[index] += self.pos_counts[word]
-            if word in self.neg_counts:
-                cluster_neg_counts[index] += self.neg_counts[word]
-
-        gamma = 0.8
-        s_hat_average = 0.0
-        cre_sim_clu_weight= np.zeros(num_centroids, dtype="float32")
-        for cluster in xrange(num_centroids):
-            if cluster_vocab[cluster]>0:  # cluster_vocab=[1,4,5,0,6]
-                s_hat = ((cluster_neg_counts[cluster])**2 +(cluster_pos_counts[cluster])**2) / (cluster_vocab[cluster])**2
-                s_hat_average += (cluster_vocab[cluster] * s_hat) / self.train_word_nums
-
-        for cluster in xrange(num_centroids):
-            if cluster_vocab[cluster]>0:
-                s_bar = ((cluster_neg_counts[cluster])**2 +(cluster_pos_counts[cluster])**2 + s_hat_average * gamma) / ((cluster_vocab[cluster])**2 + gamma)
-                cre_sim_clu_weight[cluster] = 0.5 + s_bar
-
-        logging.debug("For function cre_sim_weight() **********" )
-        logging.debug("s_hat_average %f" % s_hat_average)
-
-        print "Creating cre_sim_word_weight"
-        cre_sim_word_weight = np.zeros(len(self.vocab), dtype="float32")
-        # cre_sim_word_weight = np.zeros(len(self.train_vocab), dtype="float32")
-        zero_clusters = np.where(cre_sim_clu_weight == 0.0)[0]
-        print "%d zero_clusters" % len(zero_clusters)
-
-        vocab_list = self.get_vocab_list()
-        # vocab_list = self.get_train_vocab_list()
-        for w in vocab_list:
-            index = vocab_list.index(w)
-            cluster = w2v.word_centroid_map[w]
-            # if test word in unknown cluster
-            if cluster in zero_clusters:
-                # print "unknown cluster test word:", w
-                sim_words = w2v.most_similar(w)
-                # print 'similar words:', sim_words
-                for sim_word in sim_words:
-                    clu = w2v.word_centroid_map[sim_word]
-                    if clu in zero_clusters:
-                        continue
-                    else:
-                        cluster = clu
-                        # print "substitution word:", sim_word
-                        # print "**********************************"
-                        break
-
-            Cluster = "Cluster " + cluster.astype(str)
-            cre_sim_word_weight[index] = cre_sim_clu_weight[cluster] / len(w2v.clusters_dict[Cluster])
-
-        return cre_sim_word_weight
-
-    def cre_sim_doc_vecs(self, w2v):
-        train_tf_matrix = self.build_sim_tf_matrix(self.train_data, self.train_tf)
-
-        cre_sim_word_weight = self.cre_sim_weight(w2v)
-        train_tf_matrix = train_tf_matrix * cre_sim_word_weight
-
-        transformer = TfidfTransformer(sublinear_tf=True)
-        train_tfidf_matrix = transformer.fit_transform(train_tf_matrix)
-
-        #print " Computing train tf_idf_doc_vecs..."
-        self.train_doc_vecs = self.compute_tf_idf_feature_vecs(w2v, train_tfidf_matrix)
-
-        #print " Computing test tf matrix..."
-        test_tf_matrix = self.build_sim_tf_matrix(self.test_data, self.test_tf)
-        test_tf_matrix = test_tf_matrix * cre_sim_word_weight
-        #print " Computing test tf_idf_doc_vecs..."
-        test_tfidf_matrix = transformer.transform(test_tf_matrix)
-        self.test_doc_vecs = self.compute_tf_idf_feature_vecs(w2v, test_tfidf_matrix)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 ### word vecs supervised weight scheme ######
-    def compute_w2v_weight_vector(self, alpha=1):
+    def compute_w2v_weight_vector(self, alpha=1, sws='NBSVM', lamda=0.1):
         vocab_list = self.get_train_vocab_list()
         d = len(vocab_list)
         Fp, Fn = np.ones(d) * alpha , np.ones(d) * alpha
@@ -383,62 +75,20 @@ class DocVectors(object):
         Fp /= abs(Fp).sum()
         Fn /= abs(Fn).sum()
 
-        meaning_words = 200
-        # #### nbsvm ###
-        # nbsvm_ratio = np.log(Fp/Fn)
-        # self.weight_vector = np.abs(nbsvm_ratio)
-               
-        # counter = 0
-        # for wt in self.weight_vector:
-        #     self.weight_dict[vocab_list[counter]] = wt
-        #     counter += 1
-
-        # reverse_weight_list = self.weight_dict.keys()
-        # reverse_weight_list.sort(self.weight_sort_fun)
-
-        # nbsvm_100 =  reverse_weight_list[:meaning_words] + reverse_weight_list[-1*meaning_words:]
-
-        # ######## WFO #######
-        # lam = 0.01  # 0.1
-        # wfo = Fp**lam * np.log( (Fp/Fn)**(1-lam))
-        # self.weight_vector = np.abs(wfo)
-
-        # counter = 0
-        # self.weight_dict={}
-        # for wt in self.weight_vector:
-        #     self.weight_dict[vocab_list[counter]] = wt
-        #     counter += 1
-
-        # reverse_weight_list = self.weight_dict.keys()
-        # reverse_weight_list.sort(self.weight_sort_fun)
-
-        # wfo_100 =  reverse_weight_list[:meaning_words] + reverse_weight_list[-1*meaning_words:]
-
-        # #### odds rotio #####
-
-        OR = np.log(Fp*(1-Fn)/(Fn*(1-Fp)))
-        self.weight_vector = OR
-
-        # counter = 0
-        # self.weight_dict={}
-        # for wt in self.weight_vector:
-        #     self.weight_dict[vocab_list[counter]] = wt
-        #     counter += 1
-
-        # reverse_weight_list = self.weight_dict.keys()
-        # reverse_weight_list.sort(self.weight_sort_fun)
-
-        # OR_100 =  reverse_weight_list[:meaning_words] + reverse_weight_list[-1*meaning_words:]
-
-        # self.most_senti_words = [w for w in nbsvm_100 if w in OR_100 and w in wfo_100]
-
-        # for w in self.most_senti_words:
-        #     self.weight_dict[w] = self.weight_dict[w] * 10
-
-        # print len(self.most_senti_words)
-
-        # print self.most_senti_words
-
+        #### nbsvm ###
+        if sws == "NBSVM":
+            nbsvm_ratio = np.log(Fp/Fn)
+            self.weight_vector = np.abs(nbsvm_ratio)
+        elif sws == "OR":   
+            #### odds rotio #####
+            OR = np.log(Fp*(1-Fn)/(Fn*(1-Fp)))
+            self.weight_vector = np.abs(OR)
+        elif sws == "WFO":
+            ######## WFO #######
+            wfo = Fp**lamda * np.log( (Fp/Fn)**(1-lamda))
+            self.weight_vector = np.abs(wfo)
+        else:
+            print "something woring for weight scheme"
 
     def compute_sws_w2v_feature_vecs(self, rev, w2v):
         feature_vec = np.zeros((w2v.dimension,), dtype="float32")
@@ -446,7 +96,7 @@ class DocVectors(object):
         for word in rev.split():
             if word in w2v.vocab:
                 try:
-                    sws_w2v = w2v[word] #* self.weight_vector[self.reverse_vocab_dict[word]]         #self.reverse_vocab_dict[word]  vocab_list.index(word)
+                    sws_w2v = w2v[word] * self.weight_vector[self.reverse_vocab_dict[word]]         #self.reverse_vocab_dict[word]  vocab_list.index(word)
                     feature_vec = np.add(feature_vec, sws_w2v)
                     nwords += 1
                 except KeyError:
@@ -462,12 +112,12 @@ class DocVectors(object):
         feature_vec = unit_vec(feature_vec)   # Normalization
         return feature_vec
 
-    def get_sws_w2v_feature_vecs(self, w2v_model):
+    def get_sws_w2v_feature_vecs(self, w2v_model, sws='NBSVM', lamda = 0.1):
         """
             Given a set of documents calculate the average feature vector for each one
         """
         print "computing supervised weight vectors..."
-        self.compute_w2v_weight_vector()
+        self.compute_w2v_weight_vector(sws='NBSVM', lamda = 0.1)
         self.get_train_vocab_list()        
         # num_vocab = len(self.train_vocab)
         # vocab_list = self.get_train_vocab_list()
@@ -811,8 +461,8 @@ class DocVectors(object):
 
 
         # ######## WFO #######
-        # lam = 0.01  # 0.1
-        # wfo = Fp**lam * np.log( (Fp/Fn)**(1-lam))
+        # lamda = 0.01  # 0.1
+        # wfo = Fp**lamda * np.log( (Fp/Fn)**(1-lamda))
         # self.weight_vector = wfo
 
         # counter = 0
@@ -1389,6 +1039,340 @@ class DocVectors(object):
         test_tfidf_matrix = transformer.transform(test_tf_matrix)
         self.test_doc_vecs = test_tfidf_matrix
 ############################################
+
+
+
+
+
+############## New Function ################
+    def dist_weight(self):
+        # print " Creating cre_adjust_tf_idf weight"
+        vocab_list = self.get_train_vocab_list()
+        # dist_weight = np.zeros(len(self.train_vocab), dtype="float32")
+        # weight_dict = dict()
+        N_pos = float(len([label for label in self.train_labels if label == 1]) + 1 )
+        N_neg = float(len([label for label in self.train_labels if label == 0]) + 1 )
+        
+        for w in vocab_list:
+            Fp = (self.pos_counts[w] + 1) / N_pos
+            Fn = (self.neg_counts[w] + 1) / N_neg
+            cre_weight = ( Fn **2 +Fp**2) / (Fn+ Fp)**2
+            # cre_weight =((self.neg_counts[w])**2 +(self.pos_counts[w])**2) / (self.train_vocab[w])**2
+            or_weight = abs(Fp*(1-Fn) / (Fn*(1-Fp)))
+            lamda = 0.1
+            wfo_weight = abs( Fp**lamda * math.log( (Fp/Fn)**(1-lamda)) )
+            # i = vocab_list.index(w)
+            # dist_weight[i] = cre_weight * or_weight
+            self.weight_dict[w] = cre_weight
+
+        reverse_weight_list = self.weight_dict.keys()
+        reverse_weight_list.sort(self.weight_sort_fun)
+
+        print "reverse_weight_list"
+        for word in reverse_weight_list:
+           print word, ':', self.weight_dict[word] 
+
+    def sentiment_sort_fun(self,x,y):
+        return cmp(self.sentiment_vocab[y], self.sentiment_vocab[x])
+
+    def get_sentiment_vocab_list(self):
+        """
+            get the train word list based on reverse count
+        """
+        reverse_vocab_list = self.sentiment_vocab.keys()
+        reverse_vocab_list.sort(self.sentiment_sort_fun)
+
+        #print reverse_vocab_list
+        # for word in reverse_vocab_list:
+        #    print word, ':', self.vocab[word],' ',
+        return reverse_vocab_list
+
+    def new_fun(self):
+        sentiment_vocab = {}
+        weight_dict = self.weight_dict
+        self.dist_weight()
+        for word in weight_dict:
+            if weight_dict[word] > 0.55:
+                sentiment_vocab[word]=weight_dict[word]
+        self.sentiment_vocab = sentiment_vocab
+
+    def build_new_tf_matrix(self, w2v, revs, tf_data):
+        doc_num = len(revs)
+        # num_vocab = len(self.vocab)
+        # num_vocab = len(self.train_vocab)
+        num_vocab = len(self.sentiment_vocab)
+        tf_matrix = np.zeros((doc_num, num_vocab), dtype="float32")
+
+        counter = 0
+        # vocab_list = self.get_vocab_list()
+        # vocab_list = self.get_train_vocab_list()
+        vocab_list = self.get_sentiment_vocab_list()
+        test = 0
+        for rev in revs:
+            tf = tf_data[counter]
+            tf_list = np.zeros(num_vocab, dtype="float32")
+            for w in tf:
+                if w in vocab_list:
+                    try:
+                        i = vocab_list.index(w)
+                        tf_list[i] = tf[w]
+                    except ValueError:
+                        # Ignore out-of-vocabulary items
+                        sim_words = w2v.most_similar(w)
+                        for sim_word in sim_words:
+                            if sim_word[0] in vocab_list and sim_word[1] > 0.7:  # 
+                                # if sim_word[1] < 0.5:
+                                #     print w, sim_word
+                                i = vocab_list.index(sim_word[0])
+                                tf_list[i] = tf[w]
+                                break
+                            else:
+                                continue
+                else:
+                    sim_words = w2v.most_similar(w)
+                    for sim_word in sim_words:
+                        if sim_word[0] in vocab_list and sim_word[1] > 0.6:  # 
+                            # if sim_word[1] < 0.5:
+                            #     print w, sim_word
+                            i = vocab_list.index(sim_word[0])
+                            tf_list[i] = tf[w]
+                            break
+                        else:
+                            continue
+
+            if np.array_equal(tf_list, np.zeros(num_vocab, dtype="float32")):
+                print "Zero tf array for test doc"
+                print rev
+                #tf_list = np.random.uniform(0,2, num_vocab)
+                #print tf_list
+            
+            # # normalize tf list
+            # tf_norm_list = 0.5 + 0.5 * tf_list / np.amax(tf_list)
+            # print tf_norm_list
+            # tf_matrix[counter] = tf_norm_list
+
+            tf_matrix[counter] = tf_list
+            counter = counter + 1
+
+        return tf_matrix
+
+    def get_new_bag_of_words(self, w2v, cre_adjust=False):
+        """
+            tf-idf weight scheme
+        """
+       # print " Computing train idf tf matrix..."
+        train_tf_matrix = self.build_new_tf_matrix(w2v, self.train_data, self.train_tf)
+        # print train_tf_matrix[0]
+        # print self.get_vocab_list()
+        if cre_adjust:
+            cre_adjust_weight = self.cre_adjust_tf_idf()
+            train_tf_matrix = train_tf_matrix * cre_adjust_weight
+        transformer = TfidfTransformer(sublinear_tf=cre_adjust) # sublinear_tf=True, selected for cre_adjust = true
+        train_tfidf_matrix = transformer.fit_transform(train_tf_matrix)
+        self.train_doc_vecs = train_tfidf_matrix
+
+        #print " Computing test idf tf matrix..."
+        test_tf_matrix = self.build_new_tf_matrix(w2v, self.test_data, self.test_tf)
+        if cre_adjust:
+            test_tf_matrix = test_tf_matrix * cre_adjust_weight
+        test_tfidf_matrix = transformer.transform(test_tf_matrix)
+        self.test_doc_vecs = test_tfidf_matrix
+############################################
+
+
+
+
+
+##########################################3
+    def compute_w2v_weight_vector_XXXXXXXXXXXX(self, alpha=1, sws='NBSVM', lamda = 0.1):
+        vocab_list = self.get_train_vocab_list()
+        d = len(vocab_list)
+        Fp, Fn = np.ones(d) * alpha , np.ones(d) * alpha
+        for w in vocab_list:
+            Fp[vocab_list.index(w)] += self.pos_counts[w]
+            Fn[vocab_list.index(w)] += self.neg_counts[w]
+        Fw = Fp + Fn
+        Fp /= abs(Fp).sum()
+        Fn /= abs(Fn).sum()
+
+        meaning_words = 200
+        #### nbsvm ###
+        nbsvm_ratio = np.log(Fp/Fn)
+        self.weight_vector = np.abs(nbsvm_ratio)
+               
+        # counter = 0
+        # for wt in self.weight_vector:
+        #     self.weight_dict[vocab_list[counter]] = wt
+        #     counter += 1
+
+        # reverse_weight_list = self.weight_dict.keys()
+        # reverse_weight_list.sort(self.weight_sort_fun)
+
+        # nbsvm_100 =  reverse_weight_list[:meaning_words] + reverse_weight_list[-1*meaning_words:]
+
+        # ######## WFO #######
+        # lamda = 0.01  # 0.1
+        # wfo = Fp**lamda * np.log( (Fp/Fn)**(1-lamda))
+        # self.weight_vector = np.abs(wfo)
+
+        # counter = 0
+        # self.weight_dict={}
+        # for wt in self.weight_vector:
+        #     self.weight_dict[vocab_list[counter]] = wt
+        #     counter += 1
+
+        # reverse_weight_list = self.weight_dict.keys()
+        # reverse_weight_list.sort(self.weight_sort_fun)
+
+        # wfo_100 =  reverse_weight_list[:meaning_words] + reverse_weight_list[-1*meaning_words:]
+
+        # # #### odds rotio #####
+
+        # OR = np.log(Fp*(1-Fn)/(Fn*(1-Fp)))
+        # self.weight_vector = np.abs(OR)
+
+        # counter = 0
+        # self.weight_dict={}
+        # for wt in self.weight_vector:
+        #     self.weight_dict[vocab_list[counter]] = wt
+        #     counter += 1
+
+        # reverse_weight_list = self.weight_dict.keys()
+        # reverse_weight_list.sort(self.weight_sort_fun)
+
+        # OR_100 =  reverse_weight_list[:meaning_words] + reverse_weight_list[-1*meaning_words:]
+
+        # self.most_senti_words = [w for w in nbsvm_100 if w in OR_100 and w in wfo_100]
+
+        # for w in self.most_senti_words:
+        #     self.weight_dict[w] = self.weight_dict[w] * 10
+
+        # print len(self.most_senti_words)
+
+        # print self.most_senti_words
+###################################3
+
+
+
+
+####### XXXXXXXXXXXXXXXXXXXXXXXXX ############
+    def build_sim_tf_matrix(self, revs, tf_data):
+        doc_num = len(revs)
+        num_vocab = len(self.vocab)
+        # num_vocab = len(self.train_vocab)
+        tf_matrix = np.zeros((doc_num, num_vocab), dtype="float32")
+
+        counter = 0
+        vocab_list = self.get_vocab_list()
+        # vocab_list = self.get_train_vocab_list()
+
+        for rev in revs:
+            tf = tf_data[counter]
+            tf_list = np.zeros(num_vocab, dtype="float32")
+            for w in tf:
+                try:
+                    i = vocab_list.index(w)
+                    tf_list[i] = tf[w]
+                except ValueError:
+                    # Ignore out-of-vocabulary items
+                    continue
+            if np.array_equal(tf_list, np.zeros(num_vocab, dtype="float32")):
+                print "Zero tf array for test doc"
+                print rev
+                #tf_list = np.random.uniform(0,2, num_vocab)
+                #print tf_list
+            
+            # # normalize tf list
+            # tf_norm_list = 0.5 + 0.5 * tf_list / np.amax(tf_list)
+            # print tf_norm_list
+            # tf_matrix[counter] = tf_norm_list
+
+            tf_matrix[counter] = tf_list
+            counter = counter + 1
+
+        return tf_matrix
+
+    def cre_sim_weight(self, w2v):
+        num_centroids = max(w2v.word_centroid_map.values()) + 1
+        cluster_vocab = np.zeros(num_centroids, dtype="float32")
+        cluster_neg_counts = defaultdict(float)
+        cluster_pos_counts = defaultdict(float)
+        for word in self.train_vocab:
+            index = w2v.word_centroid_map[word]
+            cluster_vocab[index] += self.train_vocab[word]
+            if word in self.pos_counts:
+                cluster_pos_counts[index] += self.pos_counts[word]
+            if word in self.neg_counts:
+                cluster_neg_counts[index] += self.neg_counts[word]
+
+        gamma = 0.8
+        s_hat_average = 0.0
+        cre_sim_clu_weight= np.zeros(num_centroids, dtype="float32")
+        for cluster in xrange(num_centroids):
+            if cluster_vocab[cluster]>0:  # cluster_vocab=[1,4,5,0,6]
+                s_hat = ((cluster_neg_counts[cluster])**2 +(cluster_pos_counts[cluster])**2) / (cluster_vocab[cluster])**2
+                s_hat_average += (cluster_vocab[cluster] * s_hat) / self.train_word_nums
+
+        for cluster in xrange(num_centroids):
+            if cluster_vocab[cluster]>0:
+                s_bar = ((cluster_neg_counts[cluster])**2 +(cluster_pos_counts[cluster])**2 + s_hat_average * gamma) / ((cluster_vocab[cluster])**2 + gamma)
+                cre_sim_clu_weight[cluster] = 0.5 + s_bar
+
+        logging.debug("For function cre_sim_weight() **********" )
+        logging.debug("s_hat_average %f" % s_hat_average)
+
+        print "Creating cre_sim_word_weight"
+        cre_sim_word_weight = np.zeros(len(self.vocab), dtype="float32")
+        # cre_sim_word_weight = np.zeros(len(self.train_vocab), dtype="float32")
+        zero_clusters = np.where(cre_sim_clu_weight == 0.0)[0]
+        print "%d zero_clusters" % len(zero_clusters)
+
+        vocab_list = self.get_vocab_list()
+        # vocab_list = self.get_train_vocab_list()
+        for w in vocab_list:
+            index = vocab_list.index(w)
+            cluster = w2v.word_centroid_map[w]
+            # if test word in unknown cluster
+            if cluster in zero_clusters:
+                # print "unknown cluster test word:", w
+                sim_words = w2v.most_similar(w)
+                # print 'similar words:', sim_words
+                for sim_word in sim_words:
+                    clu = w2v.word_centroid_map[sim_word]
+                    if clu in zero_clusters:
+                        continue
+                    else:
+                        cluster = clu
+                        # print "substitution word:", sim_word
+                        # print "**********************************"
+                        break
+
+            Cluster = "Cluster " + cluster.astype(str)
+            cre_sim_word_weight[index] = cre_sim_clu_weight[cluster] / len(w2v.clusters_dict[Cluster])
+
+        return cre_sim_word_weight
+
+    def cre_sim_doc_vecs(self, w2v):
+        train_tf_matrix = self.build_sim_tf_matrix(self.train_data, self.train_tf)
+
+        cre_sim_word_weight = self.cre_sim_weight(w2v)
+        train_tf_matrix = train_tf_matrix * cre_sim_word_weight
+
+        transformer = TfidfTransformer(sublinear_tf=True)
+        train_tfidf_matrix = transformer.fit_transform(train_tf_matrix)
+
+        #print " Computing train tf_idf_doc_vecs..."
+        self.train_doc_vecs = self.compute_tf_idf_feature_vecs(w2v, train_tfidf_matrix)
+
+        #print " Computing test tf matrix..."
+        test_tf_matrix = self.build_sim_tf_matrix(self.test_data, self.test_tf)
+        test_tf_matrix = test_tf_matrix * cre_sim_word_weight
+        #print " Computing test tf_idf_doc_vecs..."
+        test_tfidf_matrix = transformer.transform(test_tf_matrix)
+        self.test_doc_vecs = self.compute_tf_idf_feature_vecs(w2v, test_tfidf_matrix)
+
+
+
 
 
 

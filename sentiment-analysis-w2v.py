@@ -68,8 +68,11 @@ for i in r:
     # d2v_model.get_tf_idf_feature_vecs(w2v_model)      # 77.3 c=1  word vec tf-idf scheme
     # d2v_model.get_tf_idf_feature_vecs(w2v_model, cre_adjust=True)  # 76.9 c=1  word vec cre tf-idf scheme
 
-    d2v_model.get_sws_w2v_feature_vecs(w2v_model)
-
+    # d2v_model.get_sws_w2v_feature_vecs(w2v_model, sws='NBSVM')
+    d2v_model.get_sws_w2v_feature_vecs(w2v_model, sws='OR')
+    # d2v_model.get_sws_w2v_feature_vecs(w2v_model, sws='WFO', alpha = 0.1 )
+    # d2v_model.get_sws_w2v_feature_vecs(w2v_model, sws='WFO', lamda = 0.05 )
+    # d2v_model.get_sws_w2v_feature_vecs(w2v_model, sws='WFO', alpha = 0.01 )
 
     Convert_data_format(d2v_model.train_doc_vecs, d2v_model.train_labels, "train-swsvecs.txt")
     Convert_data_format(d2v_model.test_doc_vecs, d2v_model.test_labels, "test-swsvecs.txt")
