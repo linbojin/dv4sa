@@ -62,7 +62,6 @@ class DocVectors(object):
         self.sentiment_vocab={}
 
 
-
 ### word vecs supervised weight scheme ######
     def compute_w2v_weight_vector(self, alpha=1, sws='NBSVM', lamda=0.1):
         vocab_list = self.get_train_vocab_list()
@@ -147,116 +146,6 @@ class DocVectors(object):
         self.train_doc_vecs = train_doc_vecs
         self.test_doc_vecs = test_doc_vecs
 #############################################
-
-
-
-######## word vecs centroid bags ###########
-    def cluster_cre_adjust_tf_idf(self, w2v):
-        word_centroid_map = w2v.word_centroid_map
-        num_centroids = max(word_centroid_map.values()) + 1
-        cluster_vocab = defaultdict(float)
-        cluster_neg_counts = defaultdict(float)
-        cluster_pos_counts = defaultdict(float)
-        for word in self.train_vocab:
-            if word in word_centroid_map:
-                index = word_centroid_map[word]
-                cluster_vocab[index] += self.train_vocab[word]
-                if word in self.pos_counts:
-                    cluster_pos_counts[index] += self.pos_counts[word]
-                if word in self.neg_counts:
-                    cluster_neg_counts[index] += self.neg_counts[word]
-
-        gamma = 0.8
-        s_hat_average = 0.0
-        cre_adjust_weight= np.zeros(num_centroids, dtype="float32")
-        for w in cluster_vocab:
-            s_hat = ((cluster_neg_counts[w])**2 +(cluster_pos_counts[w])**2) / (cluster_vocab[w])**2
-            s_hat_average += (cluster_vocab[w] * s_hat) / self.train_word_nums
-
-        for w in cluster_vocab:
-            s_bar = ((cluster_neg_counts[w])**2 +(cluster_pos_counts[w])**2 + s_hat_average * gamma) / ((cluster_vocab[w])**2 + gamma)
-            cre_adjust_weight[w] = 0.5 + s_bar
-
-        zero_clusters = np.where(cre_adjust_weight == 0.0)[0]
-        print "%d zero_clusters" % len(zero_clusters)
-        for ix in zero_clusters:
-            clu = "Cluster " + str(ix)
-            words = w2v.clusters_dict[clu]
-            #print words
-            
-            sim_words = w2v.most_similar(words[0])
-            # print 'similar words:', sim_words
-            for sim_word in sim_words:
-                cluster = w2v.word_centroid_map[sim_word]
-                if cluster not in zero_clusters:
-                    cre_adjust_weight[ix] = cre_adjust_weight[cluster]
-                    break
-                else:
-                    continue
-        return cre_adjust_weight
-
-    def create_bag_of_centroids(self, w2v, cre_adjust=False ):
-        """
-            Define a function to create bags of centroids
-        """
-        #
-        # The number of clusters is equal to the highest cluster index
-        # in the word / centroid map
-        word_centroid_map = w2v.word_centroid_map
-        num_centroids = max(word_centroid_map.values()) + 1
-        train_centroids = np.zeros((len(self.train_data), num_centroids), dtype="float32" )
-        test_centroids = np.zeros((len(self.test_data), num_centroids), dtype="float32" )
-
-        counter = 0.
-        for rev in self.train_data:
-            word_list = rev.split()
-            # Pre-allocate the bag of centroids vector (for speed)
-            bag_of_centroids = np.zeros( num_centroids, dtype="float32" )
-            # Loop over the words in the review. If the word is in the vocabulary,
-            # find which cluster it belongs to, and increment that cluster count
-            # by one
-            for word in word_list:
-                if word in word_centroid_map:
-                    index = word_centroid_map[word]
-                    bag_of_centroids[index] += 1
-                else:
-                    pass
-                    # print "unknown word", word
-            train_centroids[counter] = bag_of_centroids
-            counter += 1
-        
-        if cre_adjust:
-            cluster_cre_adjust_weight = self.cluster_cre_adjust_tf_idf(w2v)
-            train_centroids = train_centroids * cluster_cre_adjust_weight
-        
-        transformer = TfidfTransformer(sublinear_tf=cre_adjust)
-        train_tfidf_centroids = transformer.fit_transform(train_centroids)
-        self.train_doc_vecs = train_tfidf_centroids
-
-        counter = 0.
-        for rev in self.test_data:
-            word_list = rev.split()
-            # Pre-allocate the bag of centroids vector (for speed)
-            bag_of_centroids = np.zeros(num_centroids, dtype="float32" )
-            # Loop over the words in the review. If the word is in the vocabulary,
-            # find which cluster it belongs to, and increment that cluster count
-            # by one
-            for word in word_list:
-                if word in word_centroid_map:
-                    index = word_centroid_map[word]
-                    bag_of_centroids[index] += 1
-                else:
-                    pass
-                    # print "unknown word", word
-            test_centroids[counter] = bag_of_centroids
-            counter += 1
-
-        if cre_adjust:
-            test_centroids = test_centroids * cluster_cre_adjust_weight
-        test_tfidf_centroids = transformer.transform(test_centroids)
-        self.test_doc_vecs = test_tfidf_centroids
-############################################
-
 
 
 ######## word vecs tf-idf scheme ###########
@@ -383,7 +272,6 @@ class DocVectors(object):
         test_tfidf_matrix = transformer.transform(test_tf_matrix)
         self.test_doc_vecs = self.compute_tf_idf_feature_vecs(w2v, test_tfidf_matrix)
 #############################################
-
 
 
 ######## word vecs average scheme ##########
@@ -1042,8 +930,117 @@ class DocVectors(object):
 
 
 
+######## word vecs centroid bags ###########
+    def cluster_cre_adjust_tf_idf(self, w2v):
+        word_centroid_map = w2v.word_centroid_map
+        num_centroids = max(word_centroid_map.values()) + 1
+        cluster_vocab = defaultdict(float)
+        cluster_neg_counts = defaultdict(float)
+        cluster_pos_counts = defaultdict(float)
+        for word in self.train_vocab:
+            if word in word_centroid_map:
+                index = word_centroid_map[word]
+                cluster_vocab[index] += self.train_vocab[word]
+                if word in self.pos_counts:
+                    cluster_pos_counts[index] += self.pos_counts[word]
+                if word in self.neg_counts:
+                    cluster_neg_counts[index] += self.neg_counts[word]
+
+        gamma = 0.8
+        s_hat_average = 0.0
+        cre_adjust_weight= np.zeros(num_centroids, dtype="float32")
+        for w in cluster_vocab:
+            s_hat = ((cluster_neg_counts[w])**2 +(cluster_pos_counts[w])**2) / (cluster_vocab[w])**2
+            s_hat_average += (cluster_vocab[w] * s_hat) / self.train_word_nums
+
+        for w in cluster_vocab:
+            s_bar = ((cluster_neg_counts[w])**2 +(cluster_pos_counts[w])**2 + s_hat_average * gamma) / ((cluster_vocab[w])**2 + gamma)
+            cre_adjust_weight[w] = 0.5 + s_bar
+
+        zero_clusters = np.where(cre_adjust_weight == 0.0)[0]
+        print "%d zero_clusters" % len(zero_clusters)
+        for ix in zero_clusters:
+            clu = "Cluster " + str(ix)
+            words = w2v.clusters_dict[clu]
+            #print words
+            
+            sim_words = w2v.most_similar(words[0])
+            # print 'similar words:', sim_words
+            for sim_word in sim_words:
+                cluster = w2v.word_centroid_map[sim_word]
+                if cluster not in zero_clusters:
+                    cre_adjust_weight[ix] = cre_adjust_weight[cluster]
+                    break
+                else:
+                    continue
+        return cre_adjust_weight
+
+    def create_bag_of_centroids(self, w2v, cre_adjust=False ):
+        """
+            Define a function to create bags of centroids
+        """
+        #
+        # The number of clusters is equal to the highest cluster index
+        # in the word / centroid map
+        word_centroid_map = w2v.word_centroid_map
+        num_centroids = max(word_centroid_map.values()) + 1
+        train_centroids = np.zeros((len(self.train_data), num_centroids), dtype="float32" )
+        test_centroids = np.zeros((len(self.test_data), num_centroids), dtype="float32" )
+
+        counter = 0.
+        for rev in self.train_data:
+            word_list = rev.split()
+            # Pre-allocate the bag of centroids vector (for speed)
+            bag_of_centroids = np.zeros( num_centroids, dtype="float32" )
+            # Loop over the words in the review. If the word is in the vocabulary,
+            # find which cluster it belongs to, and increment that cluster count
+            # by one
+            for word in word_list:
+                if word in word_centroid_map:
+                    index = word_centroid_map[word]
+                    bag_of_centroids[index] += 1
+                else:
+                    pass
+                    # print "unknown word", word
+            train_centroids[counter] = bag_of_centroids
+            counter += 1
+        
+        if cre_adjust:
+            cluster_cre_adjust_weight = self.cluster_cre_adjust_tf_idf(w2v)
+            train_centroids = train_centroids * cluster_cre_adjust_weight
+        
+        transformer = TfidfTransformer(sublinear_tf=cre_adjust)
+        train_tfidf_centroids = transformer.fit_transform(train_centroids)
+        self.train_doc_vecs = train_tfidf_centroids
+
+        counter = 0.
+        for rev in self.test_data:
+            word_list = rev.split()
+            # Pre-allocate the bag of centroids vector (for speed)
+            bag_of_centroids = np.zeros(num_centroids, dtype="float32" )
+            # Loop over the words in the review. If the word is in the vocabulary,
+            # find which cluster it belongs to, and increment that cluster count
+            # by one
+            for word in word_list:
+                if word in word_centroid_map:
+                    index = word_centroid_map[word]
+                    bag_of_centroids[index] += 1
+                else:
+                    pass
+                    # print "unknown word", word
+            test_centroids[counter] = bag_of_centroids
+            counter += 1
+
+        if cre_adjust:
+            test_centroids = test_centroids * cluster_cre_adjust_weight
+        test_tfidf_centroids = transformer.transform(test_centroids)
+        self.test_doc_vecs = test_tfidf_centroids
+############################################
 
 
+
+
+#### Next To Do ############################
 ############## New Function ################
     def dist_weight(self):
         # print " Creating cre_adjust_tf_idf weight"
@@ -1180,9 +1177,6 @@ class DocVectors(object):
 ############################################
 
 
-
-
-
 ##########################################3
     def compute_w2v_weight_vector_XXXXXXXXXXXX(self, alpha=1, sws='NBSVM', lamda = 0.1):
         vocab_list = self.get_train_vocab_list()
@@ -1251,8 +1245,6 @@ class DocVectors(object):
 
         # print self.most_senti_words
 ###################################3
-
-
 
 
 ####### XXXXXXXXXXXXXXXXXXXXXXXXX ############
