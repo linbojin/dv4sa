@@ -24,12 +24,12 @@ print "Sentiment Analysis based on Supervied Weight Scheme"
 ############ Load dataset ##################
 print "Loading dataset ... "
 path = './datasets/'
-# dataset = 'rt-polarity'
+dataset = 'rt-polarity'
 # dataset = 'mpqa'
 # dataset = "test"
-# data_folder = [path+dataset+".pos", path+dataset+".neg"]
-dataset = 'subj'
-data_folder = [path+dataset+".objective", path+dataset+".subjective"]
+data_folder = [path+dataset+".pos", path+dataset+".neg"]
+# dataset = 'subj'
+# data_folder = [path+dataset+".objective", path+dataset+".subjective"]
 d2v_model = doc2vec.load_docs(data_folder, clean_string=True)
 print "Done!"
 #############################################
