@@ -2,14 +2,18 @@
 # coding = utf-8
 
 """
-    Sentiment Analysis based on word2vec
+    Sentiment Analysis based on word2vec for unsplieted data set: load data for *.p Files
+        Average
+        tf-idf
+        NBSVM
+        OR
+        WFO
     Author: Linbo
     Date: 15.03.2015
 """
 
 import os
 import sys
-import re
 import numpy as np
 import doc2vec
 from sklearn.svm import LinearSVC
@@ -26,6 +30,7 @@ dataset = 'rt-polarity'
 # dataset = 'mpqa'
 # dataset = "test"
 # dataset = 'subj'
+# dataset = 'pl2k'
 pickle_d2v_model = path + dataset + "-d2vmodel.p" 
 x = pickle.load(open(pickle_d2v_model, "rb"))
 d2v_model = x[0]
@@ -68,9 +73,9 @@ for i in r:
     # d2v_model.get_tf_idf_feature_vecs(w2v_model)      # 77.3 c=1  word vec tf-idf scheme
     # d2v_model.get_tf_idf_feature_vecs(w2v_model, cre_adjust=True)  # 76.9 c=1  word vec cre tf-idf scheme
 
-    d2v_model.get_sws_w2v_feature_vecs(w2v_model, sws='NBSVM')
+    # d2v_model.get_sws_w2v_feature_vecs(w2v_model, sws='NBSVM') 
     # d2v_model.get_sws_w2v_feature_vecs(w2v_model, sws='OR')
-    # d2v_model.get_sws_w2v_feature_vecs(w2v_model, sws='WFO', lamda = 0.1 )
+    d2v_model.get_sws_w2v_feature_vecs(w2v_model, sws='WFO', lamda = 0.1 )
     # d2v_model.get_sws_w2v_feature_vecs(w2v_model, sws='WFO', lamda = 0.05 )
     # d2v_model.get_sws_w2v_feature_vecs(w2v_model, sws='WFO', lamda = 0.01 )
 

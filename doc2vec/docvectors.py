@@ -99,8 +99,18 @@ class DocVectors(object):
                     # sws_w2v = w2v[word] * self.weight_vector[self.most_senti_words.index(word)] 
                     feature_vec = np.add(feature_vec, sws_w2v)
                     nwords += 1
-                except KeyError:
-                    pass
+                except KeyError:  #ValueError:#
+                # except ValueError:
+                    # pass # For WFO 
+                    feature_vec = np.add(feature_vec, w2v[word]*self.average_weight)
+                    nwords += 1
+                    # sim_words = w2v.most_similar(word)
+                    # for sim_word in sim_words:
+                    #     if sim_word in self.train_vocab:
+                    #         sws_w2v = w2v[sim_word] * self.weight_vector[self.reverse_vocab_dict[sim_word]] 
+                    #         feature_vec = np.add(feature_vec, sws_w2v)
+                    #         nwords += 1
+                    # pass
 
         if nwords==0.:
             print "Unkown test rev"
@@ -118,7 +128,9 @@ class DocVectors(object):
         """
         print "computing supervised weight vectors..."
         self.compute_w2v_weight_vector(sws=sws, lamda = lamda)
-        self.get_train_vocab_list()  
+        self.get_train_vocab_list() 
+        self.average_weight= np.mean(self.weight_vector)
+        print "average_weight", self.average_weight
         # self.compute_sws_weight()
         # self.weight_vector = np.abs(self.senti_weight_vector)
 
@@ -332,7 +344,7 @@ class DocVectors(object):
         Fp /= abs(Fp).sum()
         Fn /= abs(Fn).sum()
 
-        meaning_words = int(d/2) - 1000
+        meaning_words = int(d/2) - 2000
 
         # #### nbsvm ###
         # nbsvm_ratio = np.log(Fp/Fn)
@@ -723,7 +735,7 @@ class DocVectors(object):
         print " Total loaded test revs: %d" % len(result.test_data)  
         print " Total vocab size: %d" % len(vocab)
 
-        print result.train_data[:5] 
+        # print result.train_data[:5] 
         return result
 
     def train_test_split(self, cv):
@@ -1046,31 +1058,83 @@ class DocVectors(object):
 
 #### Next To Do ############################
 ############## New Function ################
-    def dist_weight(self):
-        # print " Creating cre_adjust_tf_idf weight"
+    def dist_weight(self, alpha =1):
         vocab_list = self.get_train_vocab_list()
-        # dist_weight = np.zeros(len(self.train_vocab), dtype="float32")
-        # weight_dict = dict()
-        N_pos = float(len([label for label in self.train_labels if label == 1]) + 1 )
-        N_neg = float(len([label for label in self.train_labels if label == 0]) + 1 )
-        
+        d = len(vocab_list)
+        Fp, Fn = np.ones(d) * alpha , np.ones(d) * alpha
         for w in vocab_list:
-            Fp = (self.pos_counts[w] + 1) / N_pos
-            Fn = (self.neg_counts[w] + 1) / N_neg
-            cre_weight = ( Fn **2 +Fp**2) / (Fn+ Fp)**2
-            # cre_weight =((self.neg_counts[w])**2 +(self.pos_counts[w])**2) / (self.train_vocab[w])**2
-            or_weight = abs(Fp*(1-Fn) / (Fn*(1-Fp)))
-            lamda = 0.1
-            wfo_weight = abs( Fp**lamda * math.log( (Fp/Fn)**(1-lamda)) )
-            # i = vocab_list.index(w)
-            # dist_weight[i] = cre_weight * or_weight
-            self.weight_dict[w] = cre_weight
+            Fp[vocab_list.index(w)] += self.pos_counts[w]
+            Fn[vocab_list.index(w)] += self.neg_counts[w]
+        Fw = Fp + Fn
+        Fp /= abs(Fp).sum()
+        Fn /= abs(Fn).sum()
+
+        meaning_words = 50
+
+        # #### nbsvm ###
+        # nbsvm_ratio = np.log(Fp/Fn)
+        # self.weight_vector = nbsvm_ratio
+
+        # counter = 0
+        # self.weight_dict={}
+        # for wt in self.weight_vector:
+        #     self.weight_dict[vocab_list[counter]] = wt
+        #     counter += 1
+
+        # reverse_weight_list = self.weight_dict.keys()
+        # reverse_weight_list.sort(self.weight_sort_fun)
+
+        # nbsvm_100 =  reverse_weight_list[:meaning_words] + reverse_weight_list[-1*meaning_words:]
+        # self.most_senti_words = nbsvm_100
+
+
+
+        # ######## WFO #######
+        # lamda = 0.01  # 0.1
+        # wfo = Fp**lamda * np.log( (Fp/Fn)**(1-lamda))
+        # self.weight_vector = wfo
+
+        # counter = 0
+        # self.weight_dict={}
+        # for wt in self.weight_vector:
+        #     self.weight_dict[vocab_list[counter]] = wt
+        #     counter += 1
+
+        # reverse_weight_list = self.weight_dict.keys()
+        # reverse_weight_list.sort(self.weight_sort_fun)
+
+        # wfo_100 =  reverse_weight_list[:meaning_words] + reverse_weight_list[-1*meaning_words:]
+        # self.most_senti_words = wfo_100
+
+        # #### odds rotio #####
+
+        OR = np.log(Fp*(1-Fn)/(Fn*(1-Fp)))
+        self.weight_vector = OR
+
+        counter = 0
+        self.weight_dict={}
+        for wt in self.weight_vector:
+            self.weight_dict[vocab_list[counter]] = wt
+            counter += 1
 
         reverse_weight_list = self.weight_dict.keys()
         reverse_weight_list.sort(self.weight_sort_fun)
 
-        print "reverse_weight_list"
-        for word in reverse_weight_list:
+        OR_100 =  reverse_weight_list[:meaning_words] + reverse_weight_list[-1*meaning_words:]
+        self.most_senti_words = OR_100
+
+        # self.most_senti_words = [w for w in nbsvm_100 if w in OR_100 and w in wfo_100]
+
+        # senti_weight_vector = np.zeros((len(self.most_senti_words),), dtype="float32")
+        # counter = 0.
+        # for w in self.most_senti_words:
+        #     index = vocab_list.index(w)
+        #     senti_weight_vector[counter] = self.weight_vector[index]
+        #     counter += 1
+
+        # self.senti_weight_vector = senti_weight_vector
+        print  self.most_senti_words
+        for word in self.most_senti_words:
            print word, ':', self.weight_dict[word] 
 
     def sentiment_sort_fun(self,x,y):

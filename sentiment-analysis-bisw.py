@@ -27,6 +27,7 @@ path = './datasets/'
 dataset = 'rt-polarity'
 # dataset = 'mpqa'
 # dataset = "test"
+# dataset = 'pl2k'
 data_folder = [path+dataset+".pos", path+dataset+".neg"]
 # dataset = 'subj'
 # data_folder = [path+dataset+".objective", path+dataset+".subjective"]
@@ -43,11 +44,11 @@ for i in r:
     print "Split Num = %d" % i
     d2v_model.train_test_split(i)  
 
-    d2v_model.sws_w2v_art_fun(sws='NBSVM', ngram='1')
+    # d2v_model.sws_w2v_art_fun(sws='NBSVM', ngram='1')
     # d2v_model.sws_w2v_art_fun(sws='NBSVM', ngram='12')
     # d2v_model.sws_w2v_art_fun(sws='NBSVM', ngram='123')
 
-    # d2v_model.sws_w2v_art_fun(sws='OR', ngram='1')
+    d2v_model.sws_w2v_art_fun(sws='OR', ngram='1')
     # d2v_model.sws_w2v_art_fun(sws='OR', ngram='12')
     # d2v_model.sws_w2v_art_fun(sws='OR', ngram='123')
 
@@ -65,7 +66,7 @@ print "Average accuracy: %f \n" % np.mean(test_results)
 sys.stdout.flush()
 os.remove("accuracy")
 
-pickle_d2v_model = path + dataset + "-d2vmodel-2.p" 
+pickle_d2v_model = path + dataset + "-d2vmodel.p" 
 with open(pickle_d2v_model, "wb") as f:
     pickle.dump([d2v_model], f)     # create a pickle object
 print "d2v_model *.P File created!"

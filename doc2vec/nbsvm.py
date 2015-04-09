@@ -35,11 +35,11 @@ def process_files(file_pos, file_neg, dic, r, outfn, grams, w2v):
                         try:
                             sim_words = w2v.most_similar(t)
                             for sim_word in sim_words:
-                                if sim_word[0] in dic and sim_word[1] > 0.7:  #
+                                if sim_word[0] in dic and sim_word[1] > 0.6:  #
                                     print t, sim_word
                             
-                                    # if sim_word[1] > 0.8:
-                                    #     print t, sim_word
+                                    if sim_word[1] > 0.8:
+                                        print t, sim_word
                                     indexes += [dic[sim_word[0]]]
                                     break
                                 else:
@@ -92,6 +92,9 @@ def compute_ratio(poscounts, negcounts, alpha=1, sws='NBSVM'):
         r = np.log(p*(1-q)/(q*(1-p)))  # 88.604 91.56  91.87          # sent05 78.0% 79.0   78.24%
     elif sws=='WFO':
         lam = 0.1 # 0.1
+        # r = Fp**lam * np.log( (p*(1-q)/(q*(1-p)))**(1-lam) ) 
+        # r = Fp**lam * (np.log(Fp/Fn))**(1-lam)  
+
         r = Fp**lam * np.log( (Fp/Fn)**(1-lam)) #  (0.1  89.484%  91.392%)           # sent05 76.9    78.3  
                                               #  (0.05 89.184%  91.536%  91.724%)  # sent05 78.01%  78.9
                                               #  0.04                                       78.05

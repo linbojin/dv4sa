@@ -19,7 +19,7 @@ print "Sentiment Analysis based on Bag of words"
 print "Loading dataset ... "
 path = './datasets/'
 dataset = 'rt-polarity'
-# dataset = 'mpqa'
+dataset = 'mpqa'
 data_folder = [path+dataset+".pos", path+dataset+".neg"]
 # dataset = 'subj'
 # data_folder = [path+dataset+".objective", path+dataset+".subjective"]
@@ -56,4 +56,5 @@ for i in r:
 print "****** (c=%f) ******" % c
 print "   Train Average accuracy: %f" % np.mean(train_results)
 print "   Test  Average accuracy: %f \n" % np.mean(test_results)
+
 
