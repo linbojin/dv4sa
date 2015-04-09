@@ -3,10 +3,6 @@ __pycache__/
 *.py[cod]
 /datasets/
 /outputs/
-./screenshots
-update.sh
-tests.py
-liblinear-1.96/
 accuracy
 run.sh
 
