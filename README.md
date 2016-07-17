@@ -7,8 +7,8 @@ $ wget http://09c8d0b2229f813c1b93-c95ac804525aac4b6dba79b00b39d1d3.r79.cf1.rack
 $ bash Anaconda-2.1.0-Linux-x86_64.sh
 
 Run different methods (may be missing some datasets):<br/>
-$ ./run.sh
-Usage: ./run.sh sentiment-analysis-*.py
+$ ./run.sh<br/>
+Usage: ./run.sh sentiment-analysis-*.py<br/>
 $ ./run.sh sentiment-analysis-bow.py
 
 ![Flow Chat](https://raw.githubusercontent.com/linbojin/dv4sa/master/doc/process.png)
